@@ -153,6 +153,7 @@ class _GongsuKeypadState extends State<GongsuKeypad> {
                       child: SizedBox(
                         height: 52,
                         child: OutlinedButton(
+                          key: ValueKey('keypad-$key'),
                           onPressed: key == '⌫'
                               ? _backspace
                               : () => _append(key),

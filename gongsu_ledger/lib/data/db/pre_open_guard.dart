@@ -43,6 +43,9 @@ Future<void> runPreOpenGuard(File dbFile, int codeSchemaVersion) async {
 }
 
 void _backupBeforeMigration(File dbFile, int targetVersion) {
+  // 마이그레이션이 중간에 죽고 재시도되는 경우, 이미 만들어 둔 순정 백업을
+  // 반쯤 적용된 DB로 덮어쓰면 안 된다 — 같은 target 백업이 있으면 건너뛴다.
+  if (File('${dbFile.path}.pre_v$targetVersion.bak').existsSync()) return;
   for (final suffix in const ['', '-wal', '-shm']) {
     final src = File(dbFile.path + suffix);
     if (src.existsSync()) {

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/data/backup/backup_codec.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
 import 'package:gongsu_ledger/data/repositories/memo_repository.dart';
+import 'package:gongsu_ledger/data/repositories/preset_repository.dart';
 import 'package:gongsu_ledger/data/repositories/work_entry_repository.dart';
 
 void main() {
@@ -108,6 +109,89 @@ void main() {
 
     expect(() => importBackupJson(source, jsonEncode(envelope)),
         throwsA(isA<BackupTooNew>()));
+  });
+
+  test('삭제가 병합으로 전파된다 (softDelete가 updatedAt을 올리므로)', () async {
+    final repo = WorkEntryRepository(source.workEntryDao);
+    final id = await repo.addCustom(dateKey: 20260805, centiGongsu: 100);
+
+    // 삭제 전 백업을 다른 기기에 병합
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    await importBackupJson(target, await exportBackupJson(source));
+    expect((await target.workEntryDao.getRange(20260805, 20260805)).length, 1);
+
+    // 원 기기에서 삭제 → 새 백업 → 다시 병합 → 삭제가 전파된다
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await repo.softDelete(id);
+    await importBackupJson(target, await exportBackupJson(source));
+    expect(await target.workEntryDao.getRange(20260805, 20260805), isEmpty);
+  });
+
+  test('사용자가 수정한 시드 프리셋이 새 기기의 시드를 이긴다 (시드 ts=0)', () async {
+    final presets = await source.presetDao.getActive();
+    final seed = presets.firstWhere((p) => p.name == '1.5공수');
+    await PresetRepository(source.presetDao)
+        .update(id: seed.id, name: '1.8공수', centiGongsu: 180, colorId: 3);
+    final json = await exportBackupJson(source);
+
+    // 새 기기: 방금 시드된 상태(수정 안 함)에 병합
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    await importBackupJson(target, json);
+
+    final merged = (await target.presetDao.getActive())
+        .firstWhere((p) => p.uid == seed.uid);
+    expect(merged.name, '1.8공수');
+    expect(merged.centiGongsu, 180); // 수정값이 유실되지 않는다
+  });
+
+  test('기록↔프리셋 연결이 uid로 재매핑된다 (로컬 id 어긋남 극복)', () async {
+    final preset = (await source.presetDao.getActive()).first;
+    await WorkEntryRepository(source.workEntryDao)
+        .addFromPreset(dateKey: 20260805, preset: preset);
+    final json = await exportBackupJson(source);
+
+    // 대상 기기는 자기 프리셋을 먼저 만들어 autoincrement id가 어긋난 상태
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    await PresetRepository(target.presetDao)
+        .create(name: '내프리셋', centiGongsu: 120, colorId: 5);
+    await importBackupJson(target, json);
+
+    final entry =
+        (await target.workEntryDao.getRange(20260805, 20260805)).single;
+    final linked = (await target.select(target.presets).get())
+        .firstWhere((p) => p.id == entry.presetId);
+    expect(linked.uid, preset.uid); // id가 아니라 정체(uid)가 보존된다
+  });
+
+  test('지운 메모가 옛 백업 병합으로 부활하지 않는다 (tombstone)', () async {
+    final memoRepo = MemoRepository(source.memoDao);
+    await memoRepo.setMemo(dateKey: 20260810, body: '민감한 메모');
+    final oldBackup = await exportBackupJson(source);
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await memoRepo.setMemo(dateKey: 20260810, body: ''); // 삭제(tombstone)
+    expect(await source.memoDao.watchMemo(20260810).first, null);
+
+    await importBackupJson(source, oldBackup);
+    expect(await source.memoDao.watchMemo(20260810).first, null); // 부활 없음
+  });
+
+  test('메모 삭제도 기기 간 전파된다', () async {
+    final memoRepo = MemoRepository(source.memoDao);
+    await memoRepo.setMemo(dateKey: 20260810, body: '메모');
+
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    await importBackupJson(target, await exportBackupJson(source));
+    expect((await target.memoDao.watchMemo(20260810).first)?.body, '메모');
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await memoRepo.setMemo(dateKey: 20260810, body: '');
+    await importBackupJson(target, await exportBackupJson(source));
+    expect(await target.memoDao.watchMemo(20260810).first, null);
   });
 
   test('forward-tolerant: 모르는 키는 무시하고 가져온다', () async {

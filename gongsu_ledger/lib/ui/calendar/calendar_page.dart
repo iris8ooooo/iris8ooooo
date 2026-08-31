@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/db/pre_open_guard.dart';
 import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
@@ -52,6 +53,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   @override
   Widget build(BuildContext context) {
     final ym = ref.watch(visibleYmProvider);
+    // DB 오픈 실패(다운그레이드 등)를 "빈 달력"으로 삼키지 않는다 —
+    // 사용자는 그것을 데이터 유실로 인식한다. 명시적 안내 화면을 띄운다.
+    final monthAsync = ref.watch(monthEntriesProvider(ym));
+    if (monthAsync.hasError) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('공수장부')),
+        body: _DbErrorView(error: monthAsync.error!),
+      );
+    }
     // 이웃 달 미리 구독 — 스와이프 도착 즉시 그려지도록 캐시를 데워 둔다.
     ref.watch(monthEntriesProvider(prevYm(ym)));
     ref.watch(monthEntriesProvider(nextYm(ym)));
@@ -100,6 +110,47 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   onOutsideMonthTap: _goToMonth,
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DbErrorView extends StatelessWidget {
+  const _DbErrorView({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDowngrade = error is DowngradeDetected;
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(isDowngrade ? Icons.system_update : Icons.error_outline,
+                size: 56, color: scheme.primary),
+            const SizedBox(height: 16),
+            Text(
+              isDowngrade ? '앱 업데이트가 필요해요' : '기록을 불러오지 못했어요',
+              style:
+                  const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isDowngrade
+                  ? '이 기록은 더 새로운 버전의 앱에서 만든 것이에요.\n'
+                      '앱을 최신 버전으로 업데이트하면 기록이 그대로 나타납니다.\n'
+                      '기록은 안전하게 보관되어 있어요.'
+                  : '기록은 기기에 안전하게 저장되어 있어요.\n'
+                      '앱을 완전히 종료한 뒤 다시 열어 보세요.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, color: scheme.onSurfaceVariant),
             ),
           ],
         ),

@@ -81,6 +81,21 @@ void main() {
     expect(rows.single.centiGongsu, 180);
   });
 
+  test('soft delete/복원은 updatedAtMillis도 갱신한다 (백업 병합 LWW 전제)', () async {
+    final id = await repo.addCustom(dateKey: 20260805, centiGongsu: 100);
+    final created = (await db.select(db.workEntries).get()).single;
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await repo.softDelete(id);
+    final deleted = (await db.select(db.workEntries).get()).single;
+    expect(deleted.updatedAtMillis, greaterThan(created.updatedAtMillis));
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+    await repo.restore(id);
+    final restored = (await db.select(db.workEntries).get()).single;
+    expect(restored.updatedAtMillis, greaterThan(deleted.updatedAtMillis));
+  });
+
   test('soft delete된 행은 DB에는 남는다 (물리 삭제 없음)', () async {
     final id = await repo.addCustom(dateKey: 20260805, centiGongsu: 180);
     await repo.softDelete(id);

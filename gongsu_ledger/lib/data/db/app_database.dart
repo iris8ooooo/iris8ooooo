@@ -39,8 +39,12 @@ class AppDatabase extends _$AppDatabase {
         },
       );
 
+  /// 시드 행의 타임스탬프는 고정 0 — 새 기기의 시드가 백업 병합(LWW)에서
+  /// 사용자가 수정해 둔 프리셋(updatedAt > 0)을 절대 이기지 못하게 한다.
+  /// '미수정 시드' 판정(createdAt == updatedAt)도 그대로 성립한다.
+  static const int seedTimestampMillis = 0;
+
   Future<void> _seedDefaultPresets() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
     await batch((b) {
       b.insertAll(presets, [
         for (final p in constructionSeedPresets)
@@ -50,8 +54,8 @@ class AppDatabase extends _$AppDatabase {
             centiGongsu: p.centiGongsu,
             colorId: Value(p.colorId),
             sortOrder: p.sortOrder,
-            createdAtMillis: now,
-            updatedAtMillis: now,
+            createdAtMillis: seedTimestampMillis,
+            updatedAtMillis: seedTimestampMillis,
           ),
       ]);
     });

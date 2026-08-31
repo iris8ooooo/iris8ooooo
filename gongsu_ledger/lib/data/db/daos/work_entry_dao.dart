@@ -45,9 +45,17 @@ class WorkEntryDao extends DatabaseAccessor<AppDatabase>
   Future<void> updateFields(int id, WorkEntriesCompanion changes) =>
       (update(workEntries)..where((t) => t.id.equals(id))).write(changes);
 
-  Future<void> softDelete(int id, int nowMillis) =>
-      updateFields(id, WorkEntriesCompanion(deletedAtMillis: Value(nowMillis)));
+  /// updatedAtMillis도 함께 올린다 — 백업 병합(LWW)이 updatedAt 비교라서
+  /// 이걸 안 올리면 삭제/복원이 다른 기기로 영원히 전파되지 않는다.
+  Future<void> softDelete(int id, int nowMillis) => updateFields(
+      id,
+      WorkEntriesCompanion(
+          deletedAtMillis: Value(nowMillis),
+          updatedAtMillis: Value(nowMillis)));
 
-  Future<void> restore(int id) => updateFields(
-      id, const WorkEntriesCompanion(deletedAtMillis: Value(null)));
+  Future<void> restore(int id, int nowMillis) => updateFields(
+      id,
+      WorkEntriesCompanion(
+          deletedAtMillis: const Value(null),
+          updatedAtMillis: Value(nowMillis)));
 }

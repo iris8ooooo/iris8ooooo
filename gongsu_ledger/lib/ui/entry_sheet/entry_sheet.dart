@@ -41,6 +41,10 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
   /// 수정 중인 기록. null이면 새 직접 입력.
   WorkEntry? _editing;
 
+  /// 저장/삭제 이중 실행 방지 (두 손가락 동시 탭 → 이중 insert + 이중 pop으로
+  /// 달력 화면까지 닫히는 사고 차단).
+  bool _busy = false;
+
   /// 시트 내 '실행 취소' (모달 위에서는 스낵바가 가려지므로 시트 안에 표시).
   int? _lastDeletedId;
   Timer? _undoTimer;
@@ -64,7 +68,19 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     return '${d.month}월 ${d.day}일 (${_weekdayNames[d.weekday - 1]})';
   }
 
+  /// 이 시트 라우트가 아직 최상단일 때만 pop — 이중 pop으로 달력 화면까지
+  /// 닫히는 사고를 막는다.
+  void _popSheetOnce() {
+    if (!mounted) return;
+    final route = ModalRoute.of(context);
+    if (route != null && route.isCurrent) {
+      Navigator.of(context).pop();
+    }
+  }
+
   Future<void> _addFromPreset(Preset preset) async {
+    if (_busy) return;
+    _busy = true;
     final wasEmpty = ref.read(dayEntriesProvider(widget.dateKey)).isEmpty;
     try {
       await ref
@@ -73,16 +89,20 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     } catch (e) {
       _showError('저장하지 못했어요. 다시 시도해 주세요.');
       return;
+    } finally {
+      _busy = false;
     }
     if (!mounted) return;
     if (wasEmpty) {
       // 빈 날 첫 입력은 저장 후 자동 닫힘. 기록이 있던 날은 시트를 유지해
       // 오전/오후·잔업 연속 입력(하루 무제한 여러 건)이 바로 이어진다.
-      Navigator.of(context).pop();
+      _popSheetOnce();
     }
   }
 
   Future<void> _saveCustom(int centi) async {
+    if (_busy) return;
+    _busy = true;
     final repo = ref.read(workEntryRepoProvider);
     final wasEmpty = ref.read(dayEntriesProvider(widget.dateKey)).isEmpty;
     try {
@@ -94,10 +114,12 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     } catch (e) {
       _showError('저장하지 못했어요. 다시 시도해 주세요.');
       return;
+    } finally {
+      _busy = false;
     }
     if (!mounted) return;
     if (_editing == null && wasEmpty) {
-      Navigator.of(context).pop();
+      _popSheetOnce();
       return;
     }
     setState(() {
@@ -165,6 +187,10 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
   @override
   Widget build(BuildContext context) {
     final entries = ref.watch(dayEntriesProvider(widget.dateKey));
+    // 시트가 열려 있는 동안 구독을 build 레벨에서 유지 — 모드 전환 시
+    // autoDispose 재구독으로 인한 깜빡임/재쿼리를 막는다.
+    final presetsAsync = ref.watch(presetsProvider);
+    final memoAsync = ref.watch(dayMemoProvider(widget.dateKey));
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
@@ -192,7 +218,8 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             ),
             const SizedBox(height: 12),
             switch (_mode) {
-              _SheetMode.list => _buildListMode(context, entries),
+              _SheetMode.list =>
+                _buildListMode(context, entries, presetsAsync, memoAsync),
               _SheetMode.input => GongsuKeypad(
                   initialCenti: _editing?.centiGongsu,
                   saveLabel: _editing == null ? '저장' : '수정',
@@ -210,11 +237,16 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     );
   }
 
-  Widget _buildListMode(BuildContext context, List<WorkEntry> entries) {
+  Widget _buildListMode(BuildContext context, List<WorkEntry> entries,
+      AsyncValue<List<Preset>> presetsAsync, AsyncValue<DayMemo?> memoAsync) {
     final scheme = Theme.of(context).colorScheme;
-    final presetsAsync = ref.watch(presetsProvider);
     final presets = presetsAsync.valueOrNull ?? const <Preset>[];
-    final memo = ref.watch(dayMemoProvider(widget.dateKey)).valueOrNull;
+    final memo = memoAsync.valueOrNull;
+    // 큰글씨 배율에서 버튼 안 두 줄 텍스트가 잘리지 않도록 셀 비율을
+    // 글자 배율에 맞춰 세로로 키운다.
+    final textScale =
+        MediaQuery.textScalerOf(context).scale(14) / 14;
+    final presetAspectRatio = 1.9 / textScale.clamp(1.0, 2.2);
     var totalCenti = 0;
     for (final e in entries) {
       totalCenti += e.centiGongsu;
@@ -333,7 +365,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             physics: const NeverScrollableScrollPhysics(),
             mainAxisSpacing: 8,
             crossAxisSpacing: 8,
-            childAspectRatio: 1.9,
+            childAspectRatio: presetAspectRatio,
             children: [
               for (final preset in presets)
                 FilledButton.tonal(
@@ -406,13 +438,17 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               child: OutlinedButton.icon(
                 icon: const Icon(Icons.sticky_note_2_outlined),
                 label: Text(memo == null ? '메모' : '메모 수정'),
-                onPressed: () {
-                  if (!_memoLoaded) {
-                    _memoController.text = memo?.body ?? '';
-                    _memoLoaded = true;
-                  }
-                  setState(() => _mode = _SheetMode.memo);
-                },
+                // 메모 스트림이 아직 도착하지 않았을 때 진입하면 기존 메모를
+                // 빈 값으로 덮어쓸 수 있다 — 로딩이 끝난 뒤에만 활성화.
+                onPressed: !memoAsync.hasValue
+                    ? null
+                    : () {
+                        if (!_memoLoaded) {
+                          _memoController.text = memo?.body ?? '';
+                          _memoLoaded = true;
+                        }
+                        setState(() => _mode = _SheetMode.memo);
+                      },
               ),
             ),
           ],

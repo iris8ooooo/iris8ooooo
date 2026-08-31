@@ -52,6 +52,21 @@ void main() {
     expect(File('${dbFile.path}.pre_v2-wal.bak').existsSync(), true);
   });
 
+  test('재시도 시 기존 순정 백업을 덮어쓰지 않는다', () async {
+    createDb(1);
+    await runPreOpenGuard(dbFile, 2);
+    final original = File('${dbFile.path}.pre_v2.bak').readAsBytesSync();
+
+    // 마이그레이션이 반쯤 적용되고 죽은 상황을 흉내: DB 내용 변경 후 재시도
+    final db = sq.sqlite3.open(dbFile.path);
+    db.execute('INSERT INTO t VALUES (999)');
+    db.close();
+    await runPreOpenGuard(dbFile, 2);
+
+    expect(File('${dbFile.path}.pre_v2.bak').readAsBytesSync(), original,
+        reason: '순정 백업이 보존되어야 한다');
+  });
+
   test('백업 세트는 최신 2개 버전만 남긴다', () async {
     createDb(1);
     await runPreOpenGuard(dbFile, 2);

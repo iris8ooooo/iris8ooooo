@@ -70,7 +70,8 @@ void main() {
 
     // 시트가 닫혔고(프리셋 버튼 사라짐) 저장은 정확히 그 날짜로 되었다.
     expect(find.text('1공수'), findsNothing);
-    final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
+    final rows = await db.workEntryDao
+        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
     expect(rows.single.dateKey, dateKey);
     expect(rows.single.centiGongsu, 100);
     expect(find.text('1 공수'), findsOneWidget); // 월 합계 갱신
@@ -95,7 +96,8 @@ void main() {
 
     expect(find.text('합계'), findsOneWidget); // 시트가 아직 열려 있다
     expect(find.text('2.5 공수'), findsWidgets); // 시트 내 합계
-    final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
+    final rows = await db.workEntryDao
+        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
     expect(rows.length, 2);
     await unmountApp(tester);
   });
@@ -111,14 +113,15 @@ void main() {
 
     await tester.tap(find.text('직접 입력'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('1'));
-    await tester.tap(find.text('.'));
-    await tester.tap(find.text('8'));
+    await tester.tap(find.byKey(const ValueKey('keypad-1')));
+    await tester.tap(find.byKey(const ValueKey('keypad-.')));
+    await tester.tap(find.byKey(const ValueKey('keypad-8')));
     await tester.pump();
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
 
-    final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
+    final rows = await db.workEntryDao
+        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
     expect(rows.single.centiGongsu, 180); // 1.8은 1.8이다
     expect(find.text('1.8 공수'), findsOneWidget); // 월 합계 카드
     await unmountApp(tester);
@@ -135,7 +138,7 @@ void main() {
     await tester.pumpAndSettle();
 
     for (final key in ['1', '.', '3', '3']) {
-      await tester.tap(find.text(key));
+      await tester.tap(find.byKey(ValueKey('keypad-$key')));
       await tester.pump();
     }
     expect(find.text('0.05 단위로 입력해 주세요'), findsOneWidget);
@@ -144,7 +147,8 @@ void main() {
         tester.widget<FilledButton>(find.widgetWithText(FilledButton, '저장'));
     expect(saveButton.onPressed, null); // 비활성
 
-    final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
+    final rows = await db.workEntryDao
+        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
     expect(rows, isEmpty);
     await unmountApp(tester);
   });

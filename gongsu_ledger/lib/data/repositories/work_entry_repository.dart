@@ -69,7 +69,7 @@ class WorkEntryRepository {
   /// soft delete — UI는 반드시 '실행 취소'를 제공한다.
   Future<void> softDelete(int id) => _dao.softDelete(id, _now);
 
-  Future<void> restore(int id) => _dao.restore(id);
+  Future<void> restore(int id) => _dao.restore(id, _now);
 
   void _validateCenti(int centi) {
     if (centi < 0) {
