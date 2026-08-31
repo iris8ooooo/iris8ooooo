@@ -21,6 +21,14 @@ void main() {
     );
   }
 
+  /// 테스트 끝에서 앱을 언마운트하고 한 프레임 더 돌린다.
+  /// ProviderScope 해제 시 drift가 스트림 정리용 0초 타이머를 예약하는데,
+  /// 이를 소진하지 않으면 "Pending timers"로 테스트가 실패한다.
+  Future<void> unmountApp(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+  }
+
   /// 오늘이 속한 달에서 "오늘이 아닌 빈 날"의 dateKey를 하나 고른다.
   int pickEmptyDayKey() {
     final today = DateTime.now();
@@ -39,6 +47,7 @@ void main() {
     expect(find.text('0 공수'), findsOneWidget);
     expect(
         find.byKey(ValueKey('day-${dateKeyOf(today)}')), findsOneWidget);
+    await unmountApp(tester);
   });
 
   testWidgets('빈 날: 날짜 탭 → 프리셋 탭, 2탭으로 입력 완료 + 시트 자동 닫힘',
@@ -60,6 +69,7 @@ void main() {
     expect(rows.single.dateKey, dateKey);
     expect(rows.single.centiGongsu, 100);
     expect(find.text('1 공수'), findsOneWidget); // 월 합계 갱신
+    await unmountApp(tester);
   });
 
   testWidgets('기록 있는 날: 프리셋 탭해도 시트 유지 → 연속 입력', (tester) async {
@@ -82,6 +92,7 @@ void main() {
     expect(find.text('2.5 공수'), findsWidgets); // 시트 내 합계
     final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
     expect(rows.length, 2);
+    await unmountApp(tester);
   });
 
   testWidgets('직접 입력: 자체 키패드로 1.8 → 반올림 없이 그대로 저장',
@@ -105,6 +116,7 @@ void main() {
     final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
     expect(rows.single.centiGongsu, 180); // 1.8은 1.8이다
     expect(find.text('1.8 공수'), findsOneWidget); // 월 합계 카드
+    await unmountApp(tester);
   });
 
   testWidgets('키패드는 0.05 단위 위반을 저장하지 못하게 막는다', (tester) async {
@@ -129,6 +141,7 @@ void main() {
 
     final rows = await db.workEntryDao.watchMonth(dateKey ~/ 100).first;
     expect(rows, isEmpty);
+    await unmountApp(tester);
   });
 
   testWidgets('큰글씨(2.0배)에서도 홈 화면과 시트가 그려진다', (tester) async {
@@ -143,5 +156,6 @@ void main() {
     await tester.tap(find.byKey(ValueKey('day-${pickEmptyDayKey()}')));
     await tester.pumpAndSettle();
     expect(find.text('직접 입력'), findsOneWidget);
+    await unmountApp(tester);
   });
 }
