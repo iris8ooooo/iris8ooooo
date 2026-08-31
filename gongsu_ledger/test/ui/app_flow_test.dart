@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +9,9 @@ import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 
 void main() {
+  // 테스트마다 독립 in-memory DB를 새로 만들므로 이 경고는 해당 없음.
+  driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
+
   late AppDatabase db;
 
   Widget buildApp() {
@@ -26,7 +30,8 @@ void main() {
   /// 이를 소진하지 않으면 "Pending timers"로 테스트가 실패한다.
   Future<void> unmountApp(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
+    // 0초 타이머는 가짜 시계가 흘러야 소진된다 — 인자 없는 pump()로는 안 된다.
+    await tester.pump(const Duration(seconds: 1));
   }
 
   /// 오늘이 속한 달에서 "오늘이 아닌 빈 날"의 dateKey를 하나 고른다.
