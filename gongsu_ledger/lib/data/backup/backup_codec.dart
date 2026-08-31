@@ -1,0 +1,204 @@
+import 'dart:convert';
+
+import 'package:drift/drift.dart';
+
+import '../db/app_database.dart';
+
+/// 간이 백업 코덱 (M1 안전망 — M4 정식 백업의 축소판, 같은 봉투 규약).
+///
+/// 규약 (M4에서도 유지):
+/// - 봉투: format/schemaVersion/exportedAtMillis + 테이블별 행 배열
+/// - 내보내기는 soft delete된 행도 deletedAtMillis 그대로 포함한다
+/// - 가져오기는 **병합 전용**: uid(메모는 dateKey) 기준 upsert,
+///   updatedAtMillis 최신 승리. 기존 행을 지우는 경로가 없다 —
+///   잘못된 파일을 붙여넣어도 데이터가 사라질 수 없다.
+/// - forward-tolerant: 모르는 키는 무시, 빠진 컬럼은 기본값.
+///   백업 schemaVersion이 앱 지원 범위보다 높으면 조용히 깎지 않고
+///   [BackupTooNew]를 던진다 (UI: "앱을 업데이트한 뒤 복원해 주세요").
+const String backupFormatTag = 'gongsu_ledger_backup';
+
+class BackupTooNew implements Exception {
+  BackupTooNew(this.backupVersion);
+  final int backupVersion;
+}
+
+class BackupFormatError implements Exception {
+  BackupFormatError(this.message);
+  final String message;
+  @override
+  String toString() => 'BackupFormatError: $message';
+}
+
+class ImportResult {
+  const ImportResult({required this.inserted, required this.updated});
+  final int inserted;
+  final int updated;
+}
+
+Future<String> exportBackupJson(AppDatabase db) async {
+  // 백업은 삭제 행 포함이 명세 — DAO의 alive 필터를 일부러 거치지 않는
+  // 유일한 읽기 경로다.
+  final entries = await db.select(db.workEntries).get();
+  final presets = await db.select(db.presets).get();
+  final memos = await db.select(db.dayMemos).get();
+  return jsonEncode({
+    'format': backupFormatTag,
+    'schemaVersion': AppDatabase.codeSchemaVersion,
+    'exportedAtMillis': DateTime.now().millisecondsSinceEpoch,
+    'workEntries': [
+      for (final e in entries)
+        {
+          'uid': e.uid,
+          'dateKey': e.dateKey,
+          'centiGongsu': e.centiGongsu,
+          'presetId': e.presetId,
+          'labelSnapshot': e.labelSnapshot,
+          'colorIdSnapshot': e.colorIdSnapshot,
+          'siteId': e.siteId,
+          'unitRateWonOverride': e.unitRateWonOverride,
+          'createdAtMillis': e.createdAtMillis,
+          'updatedAtMillis': e.updatedAtMillis,
+          'deletedAtMillis': e.deletedAtMillis,
+        }
+    ],
+    'presets': [
+      for (final p in presets)
+        {
+          'uid': p.uid,
+          'name': p.name,
+          'centiGongsu': p.centiGongsu,
+          'colorId': p.colorId,
+          'sortOrder': p.sortOrder,
+          'isArchived': p.isArchived,
+          'createdAtMillis': p.createdAtMillis,
+          'updatedAtMillis': p.updatedAtMillis,
+        }
+    ],
+    'dayMemos': [
+      for (final m in memos)
+        {
+          'dateKey': m.dateKey,
+          'body': m.body,
+          'updatedAtMillis': m.updatedAtMillis,
+        }
+    ],
+  });
+}
+
+Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
+  Object? decodedRaw;
+  try {
+    decodedRaw = jsonDecode(json.trim());
+  } on FormatException {
+    throw BackupFormatError('JSON이 아님');
+  }
+  final decoded = decodedRaw;
+  if (decoded is! Map<String, Object?>) {
+    throw BackupFormatError('봉투 형식이 아님');
+  }
+  if (decoded['format'] != backupFormatTag) {
+    throw BackupFormatError('공수장부 백업 데이터가 아님');
+  }
+  final version = decoded['schemaVersion'];
+  if (version is! int) throw BackupFormatError('schemaVersion 없음');
+  if (version > AppDatabase.codeSchemaVersion) throw BackupTooNew(version);
+
+  var inserted = 0;
+  var updated = 0;
+
+  await db.transaction(() async {
+    for (final row in _rows(decoded['workEntries'])) {
+      final uid = row['uid'];
+      if (uid is! String || uid.length != 36) continue;
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(db.workEntries)
+            ..where((t) => t.uid.equals(uid)))
+          .getSingleOrNull();
+      final companion = WorkEntriesCompanion(
+        uid: Value(uid),
+        dateKey: Value(_asInt(row['dateKey']) ?? 0),
+        centiGongsu: Value(_asInt(row['centiGongsu']) ?? 0),
+        presetId: Value(_asInt(row['presetId'])),
+        labelSnapshot: Value(row['labelSnapshot'] as String? ?? ''),
+        colorIdSnapshot: Value(_asInt(row['colorIdSnapshot']) ?? 0),
+        siteId: Value(_asInt(row['siteId'])),
+        unitRateWonOverride: Value(_asInt(row['unitRateWonOverride'])),
+        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+        updatedAtMillis: Value(incomingUpdatedAt),
+        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+      );
+      if (existing == null) {
+        await db.into(db.workEntries).insert(companion);
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(db.workEntries)
+              ..where((t) => t.uid.equals(uid)))
+            .write(companion);
+        updated++;
+      }
+    }
+
+    for (final row in _rows(decoded['presets'])) {
+      final uid = row['uid'];
+      if (uid is! String || uid.length != 36) continue;
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(db.presets)
+            ..where((t) => t.uid.equals(uid)))
+          .getSingleOrNull();
+      final companion = PresetsCompanion(
+        uid: Value(uid),
+        name: Value(row['name'] as String? ?? '?'),
+        centiGongsu: Value(_asInt(row['centiGongsu']) ?? 0),
+        colorId: Value(_asInt(row['colorId']) ?? 0),
+        sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
+        isArchived: Value(row['isArchived'] as bool? ?? false),
+        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+        updatedAtMillis: Value(incomingUpdatedAt),
+      );
+      if (existing == null) {
+        await db.into(db.presets).insert(companion);
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(db.presets)..where((t) => t.uid.equals(uid)))
+            .write(companion);
+        updated++;
+      }
+    }
+
+    for (final row in _rows(decoded['dayMemos'])) {
+      final dateKey = _asInt(row['dateKey']);
+      if (dateKey == null) continue;
+      final body = row['body'] as String? ?? '';
+      if (body.isEmpty) continue;
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(db.dayMemos)
+            ..where((t) => t.dateKey.equals(dateKey)))
+          .getSingleOrNull();
+      if (existing == null) {
+        await db.into(db.dayMemos).insert(DayMemosCompanion.insert(
+            dateKey: Value(dateKey),
+            body: body,
+            updatedAtMillis: incomingUpdatedAt));
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(db.dayMemos)
+              ..where((t) => t.dateKey.equals(dateKey)))
+            .write(DayMemosCompanion(
+                body: Value(body),
+                updatedAtMillis: Value(incomingUpdatedAt)));
+        updated++;
+      }
+    }
+  });
+
+  return ImportResult(inserted: inserted, updated: updated);
+}
+
+Iterable<Map<String, Object?>> _rows(Object? value) sync* {
+  if (value is! List) return;
+  for (final row in value) {
+    if (row is Map<String, Object?>) yield row;
+  }
+}
+
+int? _asInt(Object? v) => v is int ? v : null;

@@ -96,6 +96,20 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 달력: 자체 구현 우선 검토 (경쟁앱 수준의 커스텀 표시가 필요)
 - 테스트: 정산 로직(세금, 단가 이력, 공수 합산, 부가항목) 단위 테스트 필수
 
+### 확정 아키텍처 (M1 설계 워크플로 심사 결과 — 변경 시 근거 필요)
+
+- **달력 자체 구현** (table_calendar 미사용): 셀 정체성 = dateKey(yyyyMMdd int), 탭→저장 경로에 DateTime 변환 없음. 고정 6주(42칸) 격자. 격자 산출은 `domain/month_grid.dart` 순수 함수 + 경계 테스트
+- **커스텀 값 입력은 자체 키패드** (`ui/common/gongsu_keypad.dart`): 시스템 소수점 키보드(삼성 키보드 버그 계열)를 아예 쓰지 않는다. 1건 상한 10공수(UI 검증 전용)
+- **기록은 스냅샷**: WorkEntries에 입력 시점의 프리셋 이름(labelSnapshot)/색(colorIdSnapshot) 복사. 프리셋은 삭제 대신 보관(isArchived)
+- **soft delete만 존재**: 기록 삭제 = deletedAtMillis 세팅 + 실행 취소. 읽기는 DAO의 alive 필터 단일 진입점만 사용(백업 내보내기만 예외로 삭제 행 포함). 물리 삭제/DROP은 소스 가드 테스트로 부재 증명
+- **모든 기록성 행에 uid(UUIDv4)**: 백업 병합·v2 기기 간 병합의 upsert 키. 시드 프리셋은 고정 uid (기기 간 중복 생성 방지)
+- **연속 입력은 기본 동작** (설정 아님): 빈 날 첫 입력은 저장 후 시트 자동 닫힘, 기록 있는 날은 시트 유지 append
+- **마이그레이션**: additive-only 하드 룰(CREATE TABLE/ADD COLUMN/CREATE INDEX만). drift 열기 전 pre-open guard가 user_version 검사 → 업그레이드 직전 DB 파일 + -wal/-shm 동반 백업(최근 2세트 회전), 다운그레이드는 열지 않고 안내
+- **간이 JSON 백업을 M1부터 탑재** (M4 정식 백업의 축소판, 같은 봉투 규약): 내보내기는 삭제 행 포함, 가져오기는 병합 전용(uid upsert, updatedAt 최신 승리) — 기존 데이터를 지우는 경로 없음. 백업 schemaVersion > 앱 버전이면 명시 거부
+- **provider 구조**: 월 쿼리 1회(monthEntriesProvider)가 유일한 소스, 월 합계/일 상세는 파생. family 키는 전부 int. 이웃 달 ±1 미리 구독. main()은 runApp만(DB lazy open)
+- **M6 온보딩 직군 선택 규칙(선확정)**: 사용자가 수정하지 않은 시드 프리셋(고정 uid + createdAt==updatedAt)만 교체, 손댄 프리셋은 불변
+- 주 시작 요일은 M1에서 일요일 상수. M6에서 설정으로 풀 때 첫 프레임 깜빡임 방지를 위해 경량 동기 저장소(SharedPreferences)에 미러할 것
+
 ### 도메인 데이터 규칙 (중요)
 - 공수: `int` centi-공수 (1공수 = 100). 표시 시 `1.8`처럼 후행 0 제거. 파싱/표시 어디서도 double 경유 반올림 금지
 - 금액: `int` 원. 곱셈 시 `(centiGongsu * dangaWon) ~/ 100` — 단가가 100원 단위가 아닐 수 있으므로 절사 규칙을 정산 테스트로 고정
