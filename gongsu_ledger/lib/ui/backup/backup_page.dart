@@ -71,8 +71,11 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           await importBackupJson(ref.read(databaseProvider), text);
       if (mounted) {
         _importController.clear();
+        final skippedNote = result.skipped > 0
+            ? '\n손상된 행 ${result.skipped}건은 건너뛰었어요.'
+            : '';
         _showMessage('복원 완료',
-            '추가 ${result.inserted}건, 갱신 ${result.updated}건을 반영했어요.');
+            '추가 ${result.inserted}건, 갱신 ${result.updated}건을 반영했어요.$skippedNote');
       }
     } on BackupTooNew {
       if (mounted) {

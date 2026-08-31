@@ -153,6 +153,31 @@ void main() {
     await unmountApp(tester);
   });
 
+  testWidgets('메모 작성 중 스크림 탭 → 확인 없이 닫히지 않는다', (tester) async {
+    await tester.pumpWidget(buildApp());
+    await tester.pumpAndSettle();
+
+    final dateKey = pickEmptyDayKey();
+    await tester.tap(find.byKey(ValueKey('day-$dateKey')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('메모'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '단가 인상 통화함');
+    await tester.pump();
+
+    // 스크림(시트 밖) 탭 — 그냥 닫히지 않고 확인 다이얼로그가 떠야 한다
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.text('작성 중인 메모가 있어요'), findsOneWidget);
+
+    // '버리기' → 시트가 닫히고 메모는 저장되지 않는다
+    await tester.tap(find.text('버리기'));
+    await tester.pumpAndSettle();
+    expect(find.text('작성 중인 메모가 있어요'), findsNothing);
+    expect(find.byType(TextField), findsNothing);
+    await unmountApp(tester);
+  });
+
   testWidgets('큰글씨(2.0배)에서도 홈 화면과 시트가 그려진다', (tester) async {
     tester.platformDispatcher.textScaleFactorTestValue = 2.0;
     addTearDown(tester.platformDispatcher.clearAllTestValues);

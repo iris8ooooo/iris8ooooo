@@ -104,7 +104,8 @@ class DayCell extends StatelessWidget {
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: MarkerPalette.colorOf(e.colorIdSnapshot),
+                          color: MarkerPalette.colorOf(e.colorIdSnapshot,
+                              brightness: Theme.of(context).brightness),
                         ),
                       ),
                     ),

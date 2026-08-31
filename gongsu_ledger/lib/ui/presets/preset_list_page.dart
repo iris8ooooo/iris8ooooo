@@ -69,7 +69,8 @@ class PresetListPage extends ConsumerWidget {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MarkerPalette.colorOf(preset.colorId),
+                      color: MarkerPalette.colorOf(preset.colorId,
+                          brightness: Theme.of(context).brightness),
                     ),
                   ),
                   title: Text(preset.name),

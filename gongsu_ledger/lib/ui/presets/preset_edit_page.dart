@@ -156,13 +156,18 @@ class _PresetEditPageState extends ConsumerState<PresetEditPage> {
                     height: 44,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: entry.color,
+                      color: MarkerPalette.colorOf(entry.id,
+                          brightness: Theme.of(context).brightness),
                       border: _colorId == entry.id
                           ? Border.all(color: scheme.onSurface, width: 3)
                           : null,
                     ),
                     child: _colorId == entry.id
-                        ? const Icon(Icons.check, color: Colors.white)
+                        ? Icon(Icons.check,
+                            color: Theme.of(context).brightness ==
+                                    Brightness.dark
+                                ? Colors.black
+                                : Colors.white)
                         : null,
                   ),
                 ),

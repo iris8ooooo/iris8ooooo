@@ -20,6 +20,10 @@ Future<void> showEntrySheet(BuildContext context, int dateKey) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    // 드래그로 닫기 비활성: 키패드/버튼을 누르다 실수로 시트가 내려가
+    // 작성 중인 메모가 유실되는 경로를 없앤다. 닫기는 스크림 탭·뒤로가기
+    // (메모 작성 중엔 PopScope가 확인을 거침)로 충분하다.
+    enableDrag: false,
     builder: (_) => EntrySheet(dateKey: dateKey),
   );
 }
@@ -53,15 +57,23 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
   bool _memoLoaded = false;
 
   @override
+  void initState() {
+    super.initState();
+    // 메모 내용이 바뀔 때마다 rebuild — PopScope의 canPop(작성 중 여부)이
+    // 항상 최신 텍스트 기준으로 계산되게 한다.
+    _memoController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
   void dispose() {
     _undoTimer?.cancel();
     _memoController.dispose();
     super.dispose();
   }
 
-  static const List<String> _weekdayNames = [
-    '월', '화', '수', '목', '금', '토', '일',
-  ];
+  static const List<String> _weekdayNames = ['월', '화', '수', '목', '금', '토', '일'];
 
   String get _title {
     final d = dateFromKey(widget.dateKey);
@@ -192,35 +204,52 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     final presetsAsync = ref.watch(presetsProvider);
     final memoAsync = ref.watch(dayMemoProvider(widget.dateKey));
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+    // 메모 작성 중(저장 안 된 변경 있음)에는 스크림 탭/뒤로가기로 시트가
+    // 그냥 닫히지 않게 확인을 거친다 — 무경고 유실 방지.
+    final memoDirty =
+        _mode == _SheetMode.memo &&
+        _memoController.text.trim() != (memoAsync.valueOrNull?.body ?? '');
+
+    return PopScope(
+      canPop: !memoDirty,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _confirmDiscardMemo();
+      },
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
               ),
-            ),
-            Text(
-              _title,
-              textAlign: TextAlign.center,
-              style:
-                  const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 12),
-            switch (_mode) {
-              _SheetMode.list =>
-                _buildListMode(context, entries, presetsAsync, memoAsync),
-              _SheetMode.input => GongsuKeypad(
+              Text(
+                _title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 12),
+              switch (_mode) {
+                _SheetMode.list => _buildListMode(
+                  context,
+                  entries,
+                  presetsAsync,
+                  memoAsync,
+                ),
+                _SheetMode.input => GongsuKeypad(
                   initialCenti: _editing?.centiGongsu,
                   saveLabel: _editing == null ? '저장' : '수정',
                   onSave: _saveCustom,
@@ -229,23 +258,61 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                     _mode = _SheetMode.list;
                   }),
                 ),
-              _SheetMode.memo => _buildMemoMode(context),
-            },
-          ],
+                _SheetMode.memo => _buildMemoMode(context),
+              },
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildListMode(BuildContext context, List<WorkEntry> entries,
-      AsyncValue<List<Preset>> presetsAsync, AsyncValue<DayMemo?> memoAsync) {
+  Future<void> _confirmDiscardMemo() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('작성 중인 메모가 있어요'),
+        content: const Text('저장하지 않고 닫으면 지금 쓴 내용이 사라져요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('keep'),
+            child: const Text('계속 작성'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('discard'),
+            child: const Text('버리기'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop('save'),
+            child: const Text('저장 후 닫기'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'save':
+        await _saveMemo();
+        if (mounted) Navigator.of(context).pop();
+      case 'discard':
+        Navigator.of(context).pop();
+      default:
+        break; // 계속 작성
+    }
+  }
+
+  Widget _buildListMode(
+    BuildContext context,
+    List<WorkEntry> entries,
+    AsyncValue<List<Preset>> presetsAsync,
+    AsyncValue<DayMemo?> memoAsync,
+  ) {
     final scheme = Theme.of(context).colorScheme;
     final presets = presetsAsync.valueOrNull ?? const <Preset>[];
     final memo = memoAsync.valueOrNull;
     // 큰글씨 배율에서 버튼 안 두 줄 텍스트가 잘리지 않도록 셀 비율을
     // 글자 배율에 맞춰 세로로 키운다.
-    final textScale =
-        MediaQuery.textScalerOf(context).scale(14) / 14;
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     final presetAspectRatio = 1.9 / textScale.clamp(1.0, 2.2);
     var totalCenti = 0;
     for (final e in entries) {
@@ -267,10 +334,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             child: Row(
               children: [
                 const Expanded(child: Text('기록 1건을 삭제했어요')),
-                TextButton(
-                  onPressed: _undoDelete,
-                  child: const Text('실행 취소'),
-                ),
+                TextButton(onPressed: _undoDelete, child: const Text('실행 취소')),
               ],
             ),
           ),
@@ -284,8 +348,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                 _mode = _SheetMode.input;
               }),
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 child: Row(
                   children: [
                     Container(
@@ -293,8 +356,10 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                       height: 12,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color:
-                            MarkerPalette.colorOf(entry.colorIdSnapshot),
+                        color: MarkerPalette.colorOf(
+                          entry.colorIdSnapshot,
+                          brightness: Theme.of(context).brightness,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -309,12 +374,16 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                     Text(
                       '${formatGongsu(entry.centiGongsu)} 공수',
                       style: const TextStyle(
-                          fontSize: 17, fontWeight: FontWeight.w700),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     IconButton(
                       tooltip: '삭제',
-                      icon: Icon(Icons.delete_outline,
-                          color: scheme.onSurfaceVariant),
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: scheme.onSurfaceVariant,
+                      ),
                       onPressed: () => _delete(entry),
                     ),
                   ],
@@ -331,7 +400,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                 Text(
                   '${formatGongsu(totalCenti)} 공수',
                   style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w800),
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ],
             ),
@@ -343,8 +414,11 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
-                Icon(Icons.sticky_note_2_outlined,
-                    size: 18, color: scheme.tertiary),
+                Icon(
+                  Icons.sticky_note_2_outlined,
+                  size: 18,
+                  color: scheme.tertiary,
+                ),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
@@ -352,7 +426,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        fontSize: 15, color: scheme.onSurfaceVariant),
+                      fontSize: 15,
+                      color: scheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
@@ -385,7 +461,10 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                             height: 10,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: MarkerPalette.colorOf(preset.colorId),
+                              color: MarkerPalette.colorOf(
+                                preset.colorId,
+                                brightness: Theme.of(context).brightness,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 5),
@@ -395,8 +474,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600),
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],
@@ -404,7 +484,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                       Text(
                         formatGongsu(preset.centiGongsu),
                         style: TextStyle(
-                            fontSize: 13, color: scheme.onSurfaceVariant),
+                          fontSize: 13,
+                          color: scheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),
@@ -457,8 +539,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           onPressed: () {
             final navigator = Navigator.of(context);
             navigator.pop();
-            navigator.push(MaterialPageRoute(
-                builder: (_) => const PresetListPage()));
+            navigator.push(
+              MaterialPageRoute(builder: (_) => const PresetListPage()),
+            );
           },
           child: const Text('프리셋 편집'),
         ),
@@ -469,8 +552,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
   Widget _buildMemoMode(BuildContext context) {
     return Padding(
       // 메모는 일반 키보드를 쓰므로 키보드 높이만큼 올린다.
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,

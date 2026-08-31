@@ -38,12 +38,18 @@ class PresetDao extends DatabaseAccessor<AppDatabase> with _$PresetDaoMixin {
       PresetsCompanion(
           isArchived: const Value(true), updatedAtMillis: Value(nowMillis)));
 
-  /// 순서 일괄 반영. 사용자 수정 흔적(updatedAtMillis)은 남기지 않는다 —
-  /// 온보딩의 "미수정 시드만 교체" 판정은 이름/값/색 수정 여부로만 한다.
-  Future<void> reorder(List<int> orderedIds) => transaction(() async {
+  /// 순서 일괄 반영. updatedAtMillis도 올린다 — 백업 병합(LWW)이 updatedAt
+  /// 비교라서 안 올리면 순서 변경이 다른 기기로 영원히 전파되지 않는다.
+  /// 부수 효과로 순서를 바꾼 시드 프리셋은 '사용자 수정'으로 취급되어
+  /// M6 온보딩 직군 교체 대상에서 빠진다 — 사용자 의도를 지우지 않는
+  /// 안전한 방향이다.
+  Future<void> reorder(List<int> orderedIds, int nowMillis) =>
+      transaction(() async {
         for (var i = 0; i < orderedIds.length; i++) {
           await updateFields(
-              orderedIds[i], PresetsCompanion(sortOrder: Value(i)));
+              orderedIds[i],
+              PresetsCompanion(
+                  sortOrder: Value(i), updatedAtMillis: Value(nowMillis)));
         }
       });
 }

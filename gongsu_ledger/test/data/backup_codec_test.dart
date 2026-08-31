@@ -194,6 +194,61 @@ void main() {
     expect(await target.memoDao.watchMemo(20260810).first, null);
   });
 
+  test('프리셋 순서 변경이 병합으로 전파된다 (reorder가 updatedAt을 올리므로)', () async {
+    final presets = await source.presetDao.getActive();
+    final reversed = presets.map((p) => p.id).toList().reversed.toList();
+    await PresetRepository(source.presetDao).reorder(reversed);
+    final json = await exportBackupJson(source);
+
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    await importBackupJson(target, json);
+
+    final sourceOrder =
+        (await source.presetDao.getActive()).map((p) => p.uid).toList();
+    final targetOrder =
+        (await target.presetDao.getActive()).map((p) => p.uid).toList();
+    expect(targetOrder, sourceOrder);
+  });
+
+  test('오염된 행(음수 공수·엉뚱한 날짜)은 건너뛰고 skipped로 보고한다', () async {
+    await seedSource();
+    final envelope =
+        jsonDecode(await exportBackupJson(source)) as Map<String, Object?>;
+    final entries = (envelope['workEntries'] as List).cast<Map<String, Object?>>();
+    entries.add({
+      'uid': '11111111-1111-4111-8111-111111111111',
+      'dateKey': 20260815,
+      'centiGongsu': -100, // 음수 공수 — 월 합계 오염 시도
+      'updatedAtMillis': 1,
+      'createdAtMillis': 1,
+    });
+    entries.add({
+      'uid': '22222222-2222-4222-8222-222222222222',
+      // dateKey 누락 — 유령 데이터 시도
+      'centiGongsu': 100,
+      'updatedAtMillis': 1,
+      'createdAtMillis': 1,
+    });
+    entries.add({
+      'uid': '33333333-3333-4333-8333-333333333333',
+      'dateKey': 99999999, // 존재할 수 없는 날짜
+      'centiGongsu': 100,
+      'updatedAtMillis': 1,
+      'createdAtMillis': 1,
+    });
+
+    final target = AppDatabase(NativeDatabase.memory());
+    addTearDown(target.close);
+    final result = await importBackupJson(target, jsonEncode(envelope));
+
+    expect(result.skipped, 3);
+    final all = await target.select(target.workEntries).get();
+    expect(all.any((e) => e.centiGongsu < 0), false);
+    expect(all.any((e) => e.dateKey == 0), false);
+    expect(all.any((e) => e.dateKey == 99999999), false);
+  });
+
   test('forward-tolerant: 모르는 키는 무시하고 가져온다', () async {
     await seedSource();
     final envelope =

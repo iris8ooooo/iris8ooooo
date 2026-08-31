@@ -30,9 +30,27 @@ class BackupFormatError implements Exception {
 }
 
 class ImportResult {
-  const ImportResult({required this.inserted, required this.updated});
+  const ImportResult(
+      {required this.inserted, required this.updated, required this.skipped});
   final int inserted;
   final int updated;
+
+  /// 값 불변식 위반(음수 공수, 잘못된 날짜 등)으로 건너뛴 행 수.
+  /// 0이 아니면 UI가 사용자에게 알린다.
+  final int skipped;
+}
+
+/// yyyyMMdd 정수가 그럴듯한 날짜인지 검사 (2000~2100년).
+bool _isPlausibleDateKey(int key) {
+  final year = key ~/ 10000;
+  final month = (key % 10000) ~/ 100;
+  final day = key % 100;
+  return year >= 2000 &&
+      year <= 2100 &&
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= 31;
 }
 
 Future<String> exportBackupJson(AppDatabase db) async {
@@ -108,20 +126,30 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
 
   var inserted = 0;
   var updated = 0;
+  var skipped = 0;
 
   await db.transaction(() async {
     // 프리셋을 먼저 병합해야 기록의 presetUid를 로컬 id로 되살릴 수 있다.
     for (final row in _rows(decoded['presets'])) {
       final uid = row['uid'];
-      if (uid is! String || uid.length != 36) continue;
+      if (uid is! String || uid.length != 36) {
+        skipped++;
+        continue;
+      }
+      final presetCenti = _asInt(row['centiGongsu']);
+      final presetName = row['name'] as String? ?? '';
+      if (presetCenti == null || presetCenti < 0 || presetName.isEmpty) {
+        skipped++;
+        continue;
+      }
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
       final existing = await (db.select(db.presets)
             ..where((t) => t.uid.equals(uid)))
           .getSingleOrNull();
       final companion = PresetsCompanion(
         uid: Value(uid),
-        name: Value(row['name'] as String? ?? '?'),
-        centiGongsu: Value(_asInt(row['centiGongsu']) ?? 0),
+        name: Value(presetName),
+        centiGongsu: Value(presetCenti),
         colorId: Value(_asInt(row['colorId']) ?? 0),
         sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
         isArchived: Value(row['isArchived'] as bool? ?? false),
@@ -143,7 +171,22 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
 
     for (final row in _rows(decoded['workEntries'])) {
       final uid = row['uid'];
-      if (uid is! String || uid.length != 36) continue;
+      if (uid is! String || uid.length != 36) {
+        skipped++;
+        continue;
+      }
+      // 앱 내 다른 쓰기는 전부 repository 검증을 거치는데 이 경로만
+      // 우회하므로, 손상·편집된 백업의 오염 행(음수 공수, 엉뚱한 날짜)이
+      // 월 합계를 조용히 망가뜨리지 않게 여기서 값 불변식을 지킨다.
+      final dateKey = _asInt(row['dateKey']);
+      final centiGongsu = _asInt(row['centiGongsu']);
+      if (dateKey == null ||
+          !_isPlausibleDateKey(dateKey) ||
+          centiGongsu == null ||
+          centiGongsu < 0) {
+        skipped++;
+        continue;
+      }
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
       final existing = await (db.select(db.workEntries)
             ..where((t) => t.uid.equals(uid)))
@@ -151,8 +194,8 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
       final presetUid = row['presetUid'];
       final companion = WorkEntriesCompanion(
         uid: Value(uid),
-        dateKey: Value(_asInt(row['dateKey']) ?? 0),
-        centiGongsu: Value(_asInt(row['centiGongsu']) ?? 0),
+        dateKey: Value(dateKey),
+        centiGongsu: Value(centiGongsu),
         presetId:
             Value(presetUid is String ? presetIdByUid[presetUid] : null),
         labelSnapshot: Value(row['labelSnapshot'] as String? ?? ''),
@@ -176,7 +219,10 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
 
     for (final row in _rows(decoded['dayMemos'])) {
       final dateKey = _asInt(row['dateKey']);
-      if (dateKey == null) continue;
+      if (dateKey == null || !_isPlausibleDateKey(dateKey)) {
+        skipped++;
+        continue;
+      }
       final body = row['body'] as String? ?? '';
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
       final existing = await (db.select(db.dayMemos)
@@ -202,7 +248,7 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
     }
   });
 
-  return ImportResult(inserted: inserted, updated: updated);
+  return ImportResult(inserted: inserted, updated: updated, skipped: skipped);
 }
 
 Iterable<Map<String, Object?>> _rows(Object? value) sync* {

@@ -1,0 +1,127 @@
+# 공수장부 실행 가이드 (비개발자용, Mac 기준)
+
+이 문서는 개발 지식 없이 Mac에서 공수장부 앱을 직접 실행해 보는 방법입니다.
+처음 한 번만 1~5단계를 하면, 이후에는 6단계부터만 반복하면 됩니다.
+
+---
+
+## 1. Xcode 설치 (약 30분~1시간, 처음 한 번만)
+
+1. Mac의 **App Store**를 열고 **Xcode**를 검색해 설치합니다 (무료, 용량이 커서 오래 걸립니다).
+2. 설치가 끝나면 Xcode를 한 번 실행하고, 약관 동의와 추가 구성 요소 설치를 진행합니다.
+3. Xcode는 닫아도 됩니다.
+
+## 2. 터미널 열기
+
+- **Spotlight**(화면 오른쪽 위 돋보기 아이콘 또는 ⌘+스페이스)에서 `터미널`을 검색해 실행합니다.
+- 아래의 회색 상자 안 명령어들은 터미널에 **한 줄씩 복사해 붙여넣고 엔터**를 치면 됩니다.
+
+## 3. Flutter 설치 (처음 한 번만)
+
+```bash
+mkdir -p ~/development
+cd ~/development
+curl -o flutter.zip https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.47.2-stable.zip
+unzip -q flutter.zip
+echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zprofile
+```
+
+> 참고: 2020년 이전의 인텔 Mac이라면 주소의 `arm64_`를 지운
+> `flutter_macos_3.47.2-stable.zip` 을 받으세요.
+> Mac 종류는 화면 왼쪽 위  → "이 Mac에 관하여"에서 칩이
+> "Apple M1/M2/M3/M4"면 arm64가 맞습니다.
+
+터미널을 완전히 종료했다가 다시 열고, 설치를 확인합니다:
+
+```bash
+flutter doctor
+```
+
+초록 체크가 몇 개 보이면 성공입니다. iOS 줄에 CocoaPods 관련 빨간 X가 있으면:
+
+```bash
+sudo gem install cocoapods
+```
+
+(암호를 물으면 Mac 로그인 암호를 입력하세요. 입력해도 화면에 표시되지 않는 게 정상입니다.)
+
+## 4. 앱 코드 내려받기 (처음 한 번만)
+
+```bash
+cd ~/development
+git clone https://github.com/iris8ooooo/iris8ooooo.git gongsu-app
+cd gongsu-app
+git checkout claude/worker-timesheet-flutter-app-6pltoc
+```
+
+## 5. 앱 준비
+
+```bash
+cd ~/development/gongsu-app/gongsu_ledger
+flutter pub get
+```
+
+## 6. 아이폰 시뮬레이터로 실행 (가장 쉬움)
+
+```bash
+open -a Simulator
+```
+
+가상 아이폰 화면이 뜨면 (1분쯤 걸릴 수 있음):
+
+```bash
+cd ~/development/gongsu-app/gongsu_ledger
+flutter run
+```
+
+첫 실행은 몇 분 걸립니다. 시뮬레이터에 **공수장부 달력**이 뜨면 성공입니다.
+끝낼 때는 터미널에서 `q`를 누르세요.
+
+## 7. (선택) 실제 아이폰으로 실행
+
+실기기는 애플 서명 절차가 필요해 한 단계가 더 있습니다:
+
+1. 아이폰을 케이블로 Mac에 연결하고, 아이폰에서 "이 컴퓨터를 신뢰"를 누릅니다.
+2. 아이폰 설정 → 개인정보 보호 및 보안 → **개발자 모드**를 켜고 재부팅합니다.
+3. 터미널에서:
+   ```bash
+   open ~/development/gongsu-app/gongsu_ledger/ios/Runner.xcworkspace
+   ```
+4. Xcode가 열리면 왼쪽에서 **Runner**를 클릭 → 가운데 **Signing & Capabilities** 탭 →
+   **Team**에서 "Add an Account..."로 본인 Apple ID를 추가하고 선택합니다.
+5. 다시 터미널에서 `flutter run` — 기기 목록에서 본인 아이폰을 고릅니다.
+6. 아이폰에서 "신뢰하지 않는 개발자" 경고가 나오면:
+   설정 → 일반 → VPN 및 기기 관리 → 본인 Apple ID → 신뢰.
+
+## 8. 나중에 새 버전 받기
+
+작업이 진행되어 새 코드가 올라오면:
+
+```bash
+cd ~/development/gongsu-app
+git pull
+cd gongsu_ledger
+flutter pub get
+flutter run
+```
+
+---
+
+## M1에서 확인해 볼 것 (체크리스트)
+
+- [ ] 앱을 열면 **바로 이번 달 달력**이 나온다 (로그인/회원가입 없음)
+- [ ] 날짜를 탭하면 아래에서 시트가 올라오고, **1공수 버튼 한 번**으로 입력 완료 (총 2탭)
+- [ ] 위 **월 합계 카드**의 총 공수와 근무일이 바로 갱신된다
+- [ ] 기록이 있는 날은 시트가 안 닫혀서 **잔업·반공을 연달아 추가**할 수 있다
+- [ ] **직접 입력**에서 자체 키패드로 `1.8` 입력 → 정확히 1.8로 저장 (반올림 없음!)
+- [ ] `1.33`처럼 0.05 단위가 아니면 저장 버튼이 눌리지 않고 안내가 뜬다
+- [ ] 기록을 삭제하면 **실행 취소**가 뜨고, 눌러 보면 되살아난다
+- [ ] 날짜에 **메모**를 남기면 달력 칸에 작은 표시가 생긴다
+- [ ] 메모를 쓰다가 시트 밖을 탭하면 "작성 중인 메모가 있어요" 확인이 뜬다
+- [ ] 메뉴(⋮) → **프리셋 관리**에서 이름/공수값/색을 자유롭게 추가·수정·순서 변경
+- [ ] 메뉴(⋮) → **백업/복원**에서 "전체 데이터 복사" → 메모장에 붙여넣기 → "병합 복원"으로 되돌리기
+- [ ] 달력을 좌우로 넘기면 이전/다음 달로 이동, 오늘 버튼(달력 아이콘)으로 복귀
+- [ ] **비행기 모드에서도 전부 동작한다**
+- [ ] Mac 시스템 설정을 다크모드로 바꾸면 앱도 어두운 테마로 보인다 (시뮬레이터 반영)
+
+문제가 생기면 터미널에 보이는 빨간 글씨를 복사해서 Claude에게 붙여넣어 주세요.

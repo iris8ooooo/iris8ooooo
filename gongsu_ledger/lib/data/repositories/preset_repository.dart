@@ -57,7 +57,8 @@ class PresetRepository {
   /// 삭제 대신 보관. 과거 기록 표시는 스냅샷 덕분에 그대로 유지된다.
   Future<void> archive(int id) => _dao.archive(id, _now);
 
-  Future<void> reorder(List<int> orderedIds) => _dao.reorder(orderedIds);
+  Future<void> reorder(List<int> orderedIds) =>
+      _dao.reorder(orderedIds, _now);
 
   void _validate(String name, int centi, int colorId) {
     if (name.trim().isEmpty || name.trim().length > 20) {
