@@ -10,6 +10,7 @@ import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../../state/tax_providers.dart';
 import '../common/won_format.dart';
+import '../export/report_export_page.dart';
 
 /// 기간 지정 정산 — 월초 기준이 아닌 임의 기간(예: 전월 21일~당월 20일 마감
 /// 현장)의 업체별 공수·세전·공제·실수령.
@@ -147,6 +148,17 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
       appBar: AppBar(
         title: const Text('정산'),
         actions: [
+          IconButton(
+            key: const ValueKey('export-pdf'),
+            tooltip: '공수 확인서 PDF',
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) =>
+                    ReportExportPage(fromKey: _fromKey, toKey: _toKey),
+              ),
+            ),
+          ),
           IconButton(
             tooltip: '마감 주기 설정',
             icon: const Icon(Icons.event_repeat),

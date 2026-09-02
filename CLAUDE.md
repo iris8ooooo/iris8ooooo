@@ -121,9 +121,8 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M1: 스캐폴드 + 달력 + 프리셋/커스텀 공수 입력 + 월 합계** — 완료 (2026-08-31, 테스트 76개 그린, 4차원 리뷰+적대적 검증 통과. 메모/프리셋 관리/간이 백업/다크모드 팔레트 포함)
 - [x] **M2: 업체 관리 + 단가 이력 + 색상 표시 + 부가항목** — 완료 (2026-09-02, 테스트 111개 그린. schemaVersion 2: Sites/SiteRateHistories/DayExtraItems 추가, v1→v2 골든 데이터 마이그레이션 테스트, 단가 해석(적용시작일 기준·오버라이드 우선) 순수 함수, 월 세전 수입 카드, 백업 봉투 확장(uid 재매핑))
 - [x] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** — 완료 (2026-09-02, 테스트 156개 그린. schemaVersion 3: Sites.taxMode/taxOptionsJson ADD COLUMN, v1/v2→v3 골든 마이그레이션 테스트, 세금 엔진(3.3%/4대보험+일용소득세) 정수 계산, 연도별 요율 테이블+사용자 오버라이드, 기간 정산 화면(마감 주기), 통계 화면, 공휴일 2025~2027 내장)
-- [ ] **M4: 백업/복원 + PDF 증빙 + 캡쳐 공유** ← 다음
-  - base64 텍스트 내보내기/복원(기존 JSON 봉투 재사용), JSON 파일 내보내기/가져오기(share/file picker), 자동 로컬 스냅샷 7일 + 복원 메뉴, 월 공수확인서 PDF(pdf+printing), 달력 캡쳐 공유
-- [ ] M5: 홈 위젯 (iOS/Android)
+- [x] **M4: 백업/복원 + PDF 증빙 + 캡쳐 공유** — 완료 (2026-09-02, 테스트 177개 그린. base64 텍스트 백업 `GSJB1:`+gzip(공유/복사·붙여넣기 복원), JSON 파일 내보내기/가져오기(share_plus/file_picker), 자동 로컬 스냅샷 7일 회전+복원 메뉴, 월 공수확인서 PDF(pdf+printing, 나눔고딕 내장, 미리보기/공유/이미지), 달력 캡쳐 PNG 공유. 플러그인은 서비스 추상화로 테스트에서 가짜 주입)
+- [ ] **M5: 홈 위젯 (iOS/Android)** ← 다음
 - [ ] M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비
 
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것.
@@ -148,6 +147,13 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 정산 마감 주기 시작일은 AppSettings `settle_cycle_start_day`(1~28). 정산 화면 family 키는 `periodKey(from,to) = from×1e8 + to`
 - 공휴일은 `domain/korean_holidays.dart` 상수(2025~2027, 2027은 잠정). API 호출 없음. 매년 월력요항 확정 시 갱신
 - 통계는 연간 12개월을 정산 함수로 각각 계산해 파생 (별도 집계 로직 없음)
+
+### M4에서 확정된 규칙
+- 텍스트 백업 봉투 `GSJB1:` + base64(gzip(JSON 봉투)) (`data/backup/backup_text_codec.dart`). 복원은 GSJB1 텍스트·원시 JSON·파일 모두 `decodeBackupText`로 정규화 → `importBackupJson`(병합 전용). 메신저가 끼워 넣는 공백/줄바꿈은 제거
+- 자동 스냅샷: `snapshots/snapshot_<yyyyMMdd>.gsjb`, 앱 첫 프레임 뒤 그날 파일이 없으면 생성, 백그라운드 진입(paused) 시 그날 파일 갱신, 최근 7일 회전. 임시 파일에 쓴 뒤 rename. 실패는 조용히 무시(안전망이지 전제가 아님). `SnapshotScheduler`가 홈을 감싼다
+- 플러그인(share_plus/file_picker/printing/path_provider)은 `services/share_service.dart` 추상화 뒤에 두고 위젯 테스트는 가짜로 override — 플러그인을 직접 호출하는 위젯 코드 금지
+- 공수 확인서 PDF: `data/export/work_report_data.dart`(정산 결과 + 행 데이터 조립) → `work_report_pdf.dart`(pdf 패키지). 합계·공제는 반드시 정산 엔진 결과를 쓴다(화면과 숫자 일치). 한글 폰트는 `assets/fonts/NanumGothic-*.ttf`(OFL, 약 4MB) 내장 — 네트워크 폰트 금지
+- 달력 캡쳐: `RepaintBoundary` → PNG → 공유. 배경은 surface 색으로 채워 투명 PNG 방지
 
 ## 백로그
 

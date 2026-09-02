@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'ui/app_theme.dart';
 import 'ui/calendar/calendar_page.dart';
+import 'ui/common/snapshot_scheduler.dart';
 
 class GongsuApp extends StatelessWidget {
   const GongsuApp({super.key});
@@ -21,7 +22,7 @@ class GongsuApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: const CalendarPage(),
+      home: const SnapshotScheduler(child: CalendarPage()),
     );
   }
 }

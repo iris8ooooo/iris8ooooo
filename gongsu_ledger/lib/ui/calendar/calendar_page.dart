@@ -1,9 +1,13 @@
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/pre_open_guard.dart';
 import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
+import '../../state/backup_providers.dart';
 import '../../state/calendar_providers.dart';
 import '../backup/backup_page.dart';
 import '../presets/preset_list_page.dart';
@@ -28,6 +32,9 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   late final int _anchorYm;
   late final PageController _controller;
+
+  /// 달력 캡쳐 공유용 (월 카드 + 격자).
+  final GlobalKey _captureKey = GlobalKey();
 
   @override
   void initState() {
@@ -54,6 +61,41 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     );
   }
 
+  /// 달력 화면을 PNG로 만들어 공유 시트에 올린다 ("캡쳐 공유" 요청 다수).
+  Future<void> _shareCapture() async {
+    try {
+      final boundary =
+          _captureKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 2);
+      final data = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (data == null) return;
+      final ym = ref.read(visibleYmProvider);
+      await ref
+          .read(shareServiceProvider)
+          .shareBytes(
+            data.buffer.asUint8List(),
+            fileName: 'gongsu-$ym.png',
+            mimeType: 'image/png',
+          );
+    } catch (e) {
+      if (!mounted) return;
+      showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          content: const Text('달력 이미지를 공유하지 못했어요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final ym = ref.watch(visibleYmProvider);
@@ -74,6 +116,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       appBar: AppBar(
         title: Text('${yearOfYm(ym)}년 ${monthOfYm(ym)}월'),
         actions: [
+          IconButton(
+            key: const ValueKey('capture-share'),
+            tooltip: '달력 이미지 공유',
+            icon: const Icon(Icons.ios_share),
+            onPressed: _shareCapture,
+          ),
           IconButton(
             tooltip: '오늘로 이동',
             icon: const Icon(Icons.today),
@@ -121,22 +169,29 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            MonthSummaryCard(ym: ym),
-            const _WeekdayHeader(),
-            Expanded(
-              child: PageView.builder(
-                controller: _controller,
-                onPageChanged: (page) =>
-                    ref.read(visibleYmProvider.notifier).set(_ymOfPage(page)),
-                itemBuilder: (context, page) => MonthView(
-                  ym: _ymOfPage(page),
-                  onOutsideMonthTap: _goToMonth,
+        child: RepaintBoundary(
+          key: _captureKey,
+          child: ColoredBox(
+            color: Theme.of(context).colorScheme.surface,
+            child: Column(
+              children: [
+                MonthSummaryCard(ym: ym),
+                const _WeekdayHeader(),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _controller,
+                    onPageChanged: (page) => ref
+                        .read(visibleYmProvider.notifier)
+                        .set(_ymOfPage(page)),
+                    itemBuilder: (context, page) => MonthView(
+                      ym: _ymOfPage(page),
+                      onOutsideMonthTap: _goToMonth,
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

@@ -26,6 +26,17 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
           .watch()
           .map((rows) => rows.map((r) => r.read(dayMemos.dateKey)!).toSet());
 
+  /// 기간의 메모(tombstone 제외) — 확인서 PDF용.
+  Future<List<DayMemo>> getRange(int fromKey, int toKey) =>
+      (select(dayMemos)
+            ..where(
+              (t) =>
+                  t.dateKey.isBetweenValues(fromKey, toKey) &
+                  t.body.equals('').not(),
+            )
+            ..orderBy([(t) => OrderingTerm.asc(t.dateKey)]))
+          .get();
+
   /// 본문이 비면 tombstone(빈 본문 + updatedAt 갱신)으로 바꾸고,
   /// 있으면 upsert. 물리 삭제하지 않는 이유: 백업 병합(LWW)이 삭제를
   /// 인지해야 옛 백업을 붙여넣었을 때 지운 메모가 부활하지 않는다.

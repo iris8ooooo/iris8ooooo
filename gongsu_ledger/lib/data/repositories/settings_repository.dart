@@ -11,6 +11,9 @@ class SettingsRepository {
   /// 입력 시트에서 마지막으로 고른 업체 — 다음 입력의 기본값.
   static const String keyLastSiteId = 'last_site_id';
 
+  /// 공수 확인서(PDF)에 찍는 근로자 이름.
+  static const String keyReportWorkerName = 'report_worker_name';
+
   /// 세금 끝전 처리 방식 (TaxRounding.code). 기본 10원 미만 절사.
   static const String keyTaxRounding = 'tax_rounding';
 

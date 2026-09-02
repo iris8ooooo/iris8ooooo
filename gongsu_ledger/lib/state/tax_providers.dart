@@ -126,7 +126,7 @@ int periodFromKey(int key) => key ~/ 100000000;
 
 int periodToKey(int key) => key % 100000000;
 
-final _rangeEntriesProvider = StreamProvider.autoDispose
+final rangeEntriesProvider = StreamProvider.autoDispose
     .family<List<WorkEntry>, int>((ref, key) {
       return ref
           .watch(databaseProvider)
@@ -134,7 +134,7 @@ final _rangeEntriesProvider = StreamProvider.autoDispose
           .watchRange(periodFromKey(key), periodToKey(key));
     });
 
-final _rangeItemsProvider = StreamProvider.autoDispose
+final rangeItemsProvider = StreamProvider.autoDispose
     .family<List<DayExtraItem>, int>((ref, key) {
       return ref
           .watch(databaseProvider)
@@ -142,13 +142,22 @@ final _rangeItemsProvider = StreamProvider.autoDispose
           .watchRange(periodFromKey(key), periodToKey(key));
     });
 
+/// 기간의 메모 (확인서 PDF용). 키는 [periodKey].
+final rangeMemosProvider = FutureProvider.autoDispose
+    .family<List<DayMemo>, int>((ref, key) {
+      return ref
+          .watch(databaseProvider)
+          .memoDao
+          .getRange(periodFromKey(key), periodToKey(key));
+    });
+
 /// 임의 기간 정산 (정산 화면). 키는 [periodKey].
 final periodSettlementProvider = Provider.autoDispose
     .family<PeriodSettlement?, int>((ref, key) {
       final fromKey = periodFromKey(key);
       final toKey = periodToKey(key);
-      final entries = ref.watch(_rangeEntriesProvider(key)).valueOrNull;
-      final items = ref.watch(_rangeItemsProvider(key)).valueOrNull;
+      final entries = ref.watch(rangeEntriesProvider(key)).valueOrNull;
+      final items = ref.watch(rangeItemsProvider(key)).valueOrNull;
       if (entries == null || items == null) return null; // 로딩 중
       final rates =
           ref.watch(allRatesProvider).valueOrNull ?? const <SiteRateHistory>[];
@@ -171,8 +180,8 @@ final yearStatsProvider = Provider.autoDispose.family<YearStats?, int>((
   year,
 ) {
   final key = periodKey(year * 10000 + 101, year * 10000 + 1231);
-  final entries = ref.watch(_rangeEntriesProvider(key)).valueOrNull;
-  final items = ref.watch(_rangeItemsProvider(key)).valueOrNull;
+  final entries = ref.watch(rangeEntriesProvider(key)).valueOrNull;
+  final items = ref.watch(rangeItemsProvider(key)).valueOrNull;
   if (entries == null || items == null) return null;
   final rates =
       ref.watch(allRatesProvider).valueOrNull ?? const <SiteRateHistory>[];
