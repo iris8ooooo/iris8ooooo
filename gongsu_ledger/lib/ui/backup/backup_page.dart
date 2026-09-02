@@ -300,7 +300,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                     child: OutlinedButton.icon(
                       key: const ValueKey('export-file'),
                       icon: const Icon(Icons.upload_file),
-                      label: const Text('파일로 내보내기'),
+                      label: const Text('파일 내보내기'),
                       onPressed: _busy ? null : _exportFile,
                     ),
                   ),
@@ -309,7 +309,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                     child: OutlinedButton.icon(
                       key: const ValueKey('import-file'),
                       icon: const Icon(Icons.folder_open),
-                      label: const Text('파일에서 가져오기'),
+                      label: const Text('파일 가져오기'),
                       onPressed: _busy ? null : _importFile,
                     ),
                   ),

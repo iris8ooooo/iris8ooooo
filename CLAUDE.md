@@ -175,6 +175,8 @@ dart run build_runner build --delete-conflicting-outputs   # drift/riverpod 코�
 flutter analyze
 flutter test
 flutter run   # 기기/시뮬레이터 연결 시
+# 시뮬레이터 없이 화면 캡쳐 PNG + 확인서 PDF 샘플 뽑기 (오너 확인·스토어 스크린샷용)
+flutter test test/screenshots/screenshots_test.dart --dart-define=SHOT_DIR=/절대/경로
 ```
 
 ## Git
