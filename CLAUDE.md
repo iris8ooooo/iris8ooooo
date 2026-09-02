@@ -122,8 +122,8 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M2: 업체 관리 + 단가 이력 + 색상 표시 + 부가항목** — 완료 (2026-09-02, 테스트 111개 그린. schemaVersion 2: Sites/SiteRateHistories/DayExtraItems 추가, v1→v2 골든 데이터 마이그레이션 테스트, 단가 해석(적용시작일 기준·오버라이드 우선) 순수 함수, 월 세전 수입 카드, 백업 봉투 확장(uid 재매핑))
 - [x] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** — 완료 (2026-09-02, 테스트 156개 그린. schemaVersion 3: Sites.taxMode/taxOptionsJson ADD COLUMN, v1/v2→v3 골든 마이그레이션 테스트, 세금 엔진(3.3%/4대보험+일용소득세) 정수 계산, 연도별 요율 테이블+사용자 오버라이드, 기간 정산 화면(마감 주기), 통계 화면, 공휴일 2025~2027 내장)
 - [x] **M4: 백업/복원 + PDF 증빙 + 캡쳐 공유** — 완료 (2026-09-02, 테스트 177개 그린. base64 텍스트 백업 `GSJB1:`+gzip(공유/복사·붙여넣기 복원), JSON 파일 내보내기/가져오기(share_plus/file_picker), 자동 로컬 스냅샷 7일 회전+복원 메뉴, 월 공수확인서 PDF(pdf+printing, 나눔고딕 내장, 미리보기/공유/이미지), 달력 캡쳐 PNG 공유. 플러그인은 서비스 추상화로 테스트에서 가짜 주입)
-- [ ] **M5: 홈 위젯 (iOS/Android)** ← 다음
-- [ ] M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비
+- [x] **M5: 홈 위젯 (iOS/Android)** — 완료 (2026-09-02, 테스트 186개 그린. home_widget 0.9 + 서비스 추상화, 순수 페이로드 빌더(표시 문자열만), 값 변경 시에만 저장·갱신하는 HomeWidgetSyncer, iOS WidgetKit 확장 `ios/GongsuWidget`(xcodeproj 스크립트로 타깃 추가, App Group), Android AppWidgetProvider+RemoteViews 2×2. 네이티브 컴파일은 오너 Mac 첫 실행이 검증 게이트)
+- [ ] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** ← 다음
 
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것.
 
@@ -154,6 +154,15 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 플러그인(share_plus/file_picker/printing/path_provider)은 `services/share_service.dart` 추상화 뒤에 두고 위젯 테스트는 가짜로 override — 플러그인을 직접 호출하는 위젯 코드 금지
 - 공수 확인서 PDF: `data/export/work_report_data.dart`(정산 결과 + 행 데이터 조립) → `work_report_pdf.dart`(pdf 패키지). 합계·공제는 반드시 정산 엔진 결과를 쓴다(화면과 숫자 일치). 한글 폰트는 `assets/fonts/NanumGothic-*.ttf`(OFL, 약 4MB) 내장 — 네트워크 폰트 금지
 - 달력 캡쳐: `RepaintBoundary` → PNG → 공유. 배경은 surface 색으로 채워 투명 PNG 방지
+
+### M5에서 확정된 규칙
+- **위젯은 계산하지 않는다.** `domain/widget_payload.dart`의 `buildWidgetPayload`가 월 정산(monthSettlementProvider — 월 카드와 같은 경로)에서 표시 문자열(월 라벨·공수·근무일·금액 라벨·금액·갱신 시각)을 만들고, `ui/common/home_widget_syncer.dart`가 표시 값이 바뀔 때만 저장+갱신 신호를 보낸다. 키 이름(`WidgetKeys`)은 `ios/GongsuWidget/GongsuWidget.swift`·`android/.../GongsuWidgetProvider.kt`와 동일해야 한다 — 바꾸면 세 곳 동시 수정
+- 금액 줄 규칙: 노무비·가산·공제로 실제 금액이 있을 때만(`hasPricedMoney`, 단가 없는 공수뿐이면 비움). 세금 방식이 설정된 업체가 하나라도 있으면 실수령(세후), 아니면 세전
+- 플러그인은 `services/home_widget_service.dart` 추상화 뒤(M4 규칙과 동일, 테스트는 가짜 주입). App Group `group.com.gongsujangbu.gongsuLedger`, iOS kind `GongsuWidget`, Android provider `GongsuWidgetProvider`
+- iOS: 확장 타깃은 `tool/ios_add_widget_target.rb`(xcodeproj gem)로 Runner.xcodeproj에 추가 — 재실행 안전. pbxproj는 ASCII 유지(표시 이름은 Info.plist에), 프레임워크는 Swift import 자동 링크(SDK 버전 박힌 경로 금지), 버전은 Flutter Generated.xcconfig 승계(`MARKETING_VERSION=$(FLUTTER_BUILD_NAME)`). 배포 타깃 iOS 15, iOS 17 containerBackground 분기
+- Android: Glance 대신 `AppWidgetProvider`+RemoteViews (소형 1종엔 충분, Compose 컴파일러·의존성 없이 빌드 위험 최소). `updatePeriodMillis=0` — 주기 갱신 없이 앱이 값을 바꿀 때만 갱신. 앱/위젯 표시 이름은 `res/values/strings.xml`
+- 달 바뀜: 앱이 resumed될 때 현재 달로 재구독. 앱을 안 열면 위젯은 마지막 달 라벨("9월 공수")을 그대로 보여준다(라벨에 달이 있어 오해 없음)
+- 네이티브 코드(Swift/Kotlin)는 이 환경에서 컴파일 검증 불가 — 오너 Mac의 첫 `flutter run`이 검증 게이트. 위젯 프로 게이팅은 M6 IAP와 함께 넣는다(지금은 전원 사용)
 
 ## 백로그
 

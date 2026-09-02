@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 홈 위젯 색 (다크) -->
+    <color name="widget_bg">#FF1E2125</color>
+    <color name="widget_text_primary">#FFE6E7EB</color>
+    <color name="widget_text_secondary">#FFB3BAC6</color>
+    <color name="widget_accent">#FFA6C8FF</color>
+</resources>
