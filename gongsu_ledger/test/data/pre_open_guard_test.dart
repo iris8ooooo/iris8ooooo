@@ -32,8 +32,7 @@ void main() {
   test('같은 버전이면 백업하지 않는다', () async {
     createDb(1);
     await runPreOpenGuard(dbFile, 1);
-    expect(
-        tempDir.listSync().where((f) => f.path.endsWith('.bak')), isEmpty);
+    expect(tempDir.listSync().where((f) => f.path.endsWith('.bak')), isEmpty);
   });
 
   test('업그레이드 직전에는 파일 백업을 만든다', () async {
@@ -63,8 +62,11 @@ void main() {
     db.close();
     await runPreOpenGuard(dbFile, 2);
 
-    expect(File('${dbFile.path}.pre_v2.bak').readAsBytesSync(), original,
-        reason: '순정 백업이 보존되어야 한다');
+    expect(
+      File('${dbFile.path}.pre_v2.bak').readAsBytesSync(),
+      original,
+      reason: '순정 백업이 보존되어야 한다',
+    );
   });
 
   test('백업 세트는 최신 2개 버전만 남긴다', () async {
@@ -82,8 +84,7 @@ void main() {
 
   test('다운그레이드는 열지 않고 예외 (파괴적 재생성 금지)', () async {
     createDb(5);
-    expect(() => runPreOpenGuard(dbFile, 1),
-        throwsA(isA<DowngradeDetected>()));
+    expect(() => runPreOpenGuard(dbFile, 1), throwsA(isA<DowngradeDetected>()));
     // 파일은 그대로 남는다
     final db = sq.sqlite3.open(dbFile.path, mode: sq.OpenMode.readOnly);
     expect(db.select('SELECT COUNT(*) c FROM t').first.values.first, 1);

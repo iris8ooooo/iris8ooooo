@@ -15,7 +15,9 @@ void main() {
     for (final e in MarkerPalette.entries) {
       expect(MarkerPalette.colorOf(e.id), e.color);
       expect(
-          MarkerPalette.colorOf(e.id, brightness: Brightness.dark), e.darkColor);
+        MarkerPalette.colorOf(e.id, brightness: Brightness.dark),
+        e.darkColor,
+      );
     }
   });
 
@@ -36,8 +38,11 @@ void main() {
     }
 
     for (final e in MarkerPalette.entries) {
-      expect(contrast(e.darkColor, darkSurface), greaterThanOrEqualTo(3.0),
-          reason: '${e.name} 다크 변형 대비 미달');
+      expect(
+        contrast(e.darkColor, darkSurface),
+        greaterThanOrEqualTo(3.0),
+        reason: '${e.name} 다크 변형 대비 미달',
+      );
     }
   });
 }

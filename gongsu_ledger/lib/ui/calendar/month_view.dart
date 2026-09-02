@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
+import '../../state/site_providers.dart';
 import '../entry_sheet/entry_sheet.dart';
 import 'day_cell.dart';
 
@@ -22,10 +23,12 @@ class MonthView extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final entriesByDay = ref.watch(monthEntriesProvider(ym)).valueOrNull ??
+    final entriesByDay =
+        ref.watch(monthEntriesProvider(ym)).valueOrNull ??
         const <int, List<Never>>{};
     final memoKeys =
         ref.watch(monthMemoKeysProvider(ym)).valueOrNull ?? const <int>{};
+    final siteById = ref.watch(siteByIdProvider);
     final dateKeys = monthGridDateKeys(ym);
     final todayKey = dateKeyOf(DateTime.now());
 
@@ -39,27 +42,30 @@ class MonthView extends ConsumerWidget {
                 children: [
                   for (var day = 0; day < 7; day++)
                     Expanded(
-                      child: Builder(builder: (context) {
-                        final dateKey = dateKeys[week * 7 + day];
-                        final inMonth = ymOfDateKey(dateKey) == ym;
-                        return DayCell(
-                          key: ValueKey('day-$dateKey'),
-                          dateKey: dateKey,
-                          inMonth: inMonth,
-                          isToday: dateKey == todayKey,
-                          entries: inMonth
-                              ? (entriesByDay[dateKey] ?? const [])
-                              : const [],
-                          hasMemo: inMonth && memoKeys.contains(dateKey),
-                          onTap: () {
-                            if (inMonth) {
-                              showEntrySheet(context, dateKey);
-                            } else {
-                              onOutsideMonthTap(ymOfDateKey(dateKey));
-                            }
-                          },
-                        );
-                      }),
+                      child: Builder(
+                        builder: (context) {
+                          final dateKey = dateKeys[week * 7 + day];
+                          final inMonth = ymOfDateKey(dateKey) == ym;
+                          return DayCell(
+                            key: ValueKey('day-$dateKey'),
+                            dateKey: dateKey,
+                            inMonth: inMonth,
+                            isToday: dateKey == todayKey,
+                            entries: inMonth
+                                ? (entriesByDay[dateKey] ?? const [])
+                                : const [],
+                            hasMemo: inMonth && memoKeys.contains(dateKey),
+                            siteById: siteById,
+                            onTap: () {
+                              if (inMonth) {
+                                showEntrySheet(context, dateKey);
+                              } else {
+                                onOutsideMonthTap(ymOfDateKey(dateKey));
+                              }
+                            },
+                          );
+                        },
+                      ),
                     ),
                 ],
               ),

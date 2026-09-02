@@ -4,14 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/app_database.dart';
+import '../../data/repositories/day_item_repository.dart';
+import '../../data/repositories/settings_repository.dart';
 import '../../domain/date_key.dart';
 import '../../domain/gongsu_value.dart';
 import '../../domain/marker_palette.dart';
+import '../../domain/rate_resolver.dart';
 import '../../state/calendar_providers.dart';
 import '../../state/db_providers.dart';
 import '../../state/preset_providers.dart';
+import '../../state/site_providers.dart';
 import '../common/gongsu_keypad.dart';
+import '../common/won_format.dart';
 import '../presets/preset_list_page.dart';
+import 'extra_item_dialog.dart';
+import 'site_chips.dart';
 
 /// 날짜 탭 → 이 시트. 프리셋 버튼 탭이 두 번째(마지막) 탭이 되도록 설계
 /// (요구: 3탭 이내, 실제 2탭).
@@ -29,6 +36,9 @@ Future<void> showEntrySheet(BuildContext context, int dateKey) {
 }
 
 enum _SheetMode { list, input, memo }
+
+/// 시트 내 실행 취소 대상 (기록 또는 부가항목).
+typedef _Deleted = ({bool isItem, int id});
 
 class EntrySheet extends ConsumerStatefulWidget {
   const EntrySheet({super.key, required this.dateKey});
@@ -50,11 +60,16 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
   bool _busy = false;
 
   /// 시트 내 '실행 취소' (모달 위에서는 스낵바가 가려지므로 시트 안에 표시).
-  int? _lastDeletedId;
+  _Deleted? _lastDeleted;
   Timer? _undoTimer;
 
   final TextEditingController _memoController = TextEditingController();
   bool _memoLoaded = false;
+
+  /// 새 입력에 붙일 업체. 사용자가 칩을 고르기 전에는 "마지막에 고른 업체"
+  /// 설정값을 따른다.
+  int? _selectedSiteId;
+  bool _siteChosen = false;
 
   @override
   void initState() {
@@ -90,14 +105,37 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     }
   }
 
-  Future<void> _addFromPreset(Preset preset) async {
+  /// 새 입력에 붙일 업체 id (활성 업체 중에서만).
+  int? _effectiveSiteId(List<Site> activeSites) {
+    final candidate = _siteChosen
+        ? _selectedSiteId
+        : ref.watch(lastSiteIdProvider).valueOrNull;
+    if (candidate == null) return null;
+    return activeSites.any((s) => s.id == candidate) ? candidate : null;
+  }
+
+  void _chooseSite(int? siteId) {
+    setState(() {
+      _siteChosen = true;
+      _selectedSiteId = siteId;
+    });
+    ref
+        .read(settingsRepoProvider)
+        .setInt(SettingsRepository.keyLastSiteId, siteId);
+  }
+
+  Future<void> _addFromPreset(Preset preset, int? siteId) async {
     if (_busy) return;
     _busy = true;
     final wasEmpty = ref.read(dayEntriesProvider(widget.dateKey)).isEmpty;
     try {
       await ref
           .read(workEntryRepoProvider)
-          .addFromPreset(dateKey: widget.dateKey, preset: preset);
+          .addFromPreset(
+            dateKey: widget.dateKey,
+            preset: preset,
+            siteId: siteId,
+          );
     } catch (e) {
       _showError('저장하지 못했어요. 다시 시도해 주세요.');
       return;
@@ -112,14 +150,18 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     }
   }
 
-  Future<void> _saveCustom(int centi) async {
+  Future<void> _saveCustom(int centi, int? siteId) async {
     if (_busy) return;
     _busy = true;
     final repo = ref.read(workEntryRepoProvider);
     final wasEmpty = ref.read(dayEntriesProvider(widget.dateKey)).isEmpty;
     try {
       if (_editing == null) {
-        await repo.addCustom(dateKey: widget.dateKey, centiGongsu: centi);
+        await repo.addCustom(
+          dateKey: widget.dateKey,
+          centiGongsu: centi,
+          siteId: siteId,
+        );
       } else {
         await repo.updateValue(id: _editing!.id, centiGongsu: centi);
       }
@@ -140,6 +182,87 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     });
   }
 
+  Future<void> _changeEntrySite(WorkEntry entry, int? siteId) async {
+    try {
+      await ref
+          .read(workEntryRepoProvider)
+          .updateSite(id: entry.id, siteId: siteId);
+    } catch (e) {
+      _showError('업체를 바꾸지 못했어요.');
+    }
+  }
+
+  Future<void> _editOverride(WorkEntry entry) async {
+    final controller = TextEditingController(
+      text: entry.unitRateWonOverride == null
+          ? ''
+          : '${entry.unitRateWonOverride}',
+    );
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('이 날만 단가'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              inputFormatters: wonInputFormatters,
+              style: const TextStyle(fontSize: 20),
+              decoration: const InputDecoration(
+                labelText: '1공수 단가 (원)',
+                suffixText: '원',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '이 기록에만 적용돼요. 업체 단가 이력은 바뀌지 않아요.',
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(dialogContext).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          if (entry.unitRateWonOverride != null)
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop('clear'),
+              child: const Text('해제'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(null),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop('save'),
+            child: const Text('저장'),
+          ),
+        ],
+      ),
+    );
+    if (result == null || !mounted) return;
+    final repo = ref.read(workEntryRepoProvider);
+    try {
+      if (result == 'clear') {
+        await repo.updateRateOverride(id: entry.id, unitRateWonOverride: null);
+      } else {
+        final won = parseWon(controller.text);
+        if (won == null) {
+          _showError('단가 금액을 입력해 주세요.');
+          return;
+        }
+        await repo.updateRateOverride(id: entry.id, unitRateWonOverride: won);
+      }
+    } catch (e) {
+      _showError('단가를 저장하지 못했어요.');
+    }
+  }
+
   Future<void> _delete(WorkEntry entry) async {
     try {
       await ref.read(workEntryRepoProvider).softDelete(entry.id);
@@ -147,24 +270,60 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
       _showError('삭제하지 못했어요. 다시 시도해 주세요.');
       return;
     }
+    _markDeleted((isItem: false, id: entry.id));
+  }
+
+  Future<void> _deleteItem(DayExtraItem item) async {
+    try {
+      await ref.read(dayItemRepoProvider).softDelete(item.id);
+    } catch (e) {
+      _showError('삭제하지 못했어요. 다시 시도해 주세요.');
+      return;
+    }
+    _markDeleted((isItem: true, id: item.id));
+  }
+
+  void _markDeleted(_Deleted deleted) {
     if (!mounted) return;
     _undoTimer?.cancel();
-    setState(() => _lastDeletedId = entry.id);
+    setState(() => _lastDeleted = deleted);
     _undoTimer = Timer(const Duration(seconds: 6), () {
-      if (mounted) setState(() => _lastDeletedId = null);
+      if (mounted) setState(() => _lastDeleted = null);
     });
   }
 
   Future<void> _undoDelete() async {
-    final id = _lastDeletedId;
-    if (id == null) return;
+    final deleted = _lastDeleted;
+    if (deleted == null) return;
     _undoTimer?.cancel();
     try {
-      await ref.read(workEntryRepoProvider).restore(id);
+      if (deleted.isItem) {
+        await ref.read(dayItemRepoProvider).restore(deleted.id);
+      } else {
+        await ref.read(workEntryRepoProvider).restore(deleted.id);
+      }
     } catch (e) {
       _showError('되돌리지 못했어요.');
     }
-    if (mounted) setState(() => _lastDeletedId = null);
+    if (mounted) setState(() => _lastDeleted = null);
+  }
+
+  Future<void> _addExtraItem(int? siteId) async {
+    final input = await showExtraItemDialog(context);
+    if (input == null || !mounted) return;
+    try {
+      await ref
+          .read(dayItemRepoProvider)
+          .add(
+            dateKey: widget.dateKey,
+            kind: input.kind,
+            label: input.label,
+            amountWon: input.amountWon,
+            siteId: siteId,
+          );
+    } catch (e) {
+      _showError('부가항목을 저장하지 못했어요.');
+    }
   }
 
   Future<void> _saveMemo() async {
@@ -196,6 +355,40 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     );
   }
 
+  Future<void> _confirmDiscardMemo() async {
+    final choice = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('작성 중인 메모가 있어요'),
+        content: const Text('저장하지 않고 닫으면 지금 쓴 내용이 사라져요.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('keep'),
+            child: const Text('계속 작성'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop('discard'),
+            child: const Text('버리기'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop('save'),
+            child: const Text('저장 후 닫기'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    switch (choice) {
+      case 'save':
+        await _saveMemo();
+        if (mounted) Navigator.of(context).pop();
+      case 'discard':
+        Navigator.of(context).pop();
+      default:
+        break; // 계속 작성
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final entries = ref.watch(dayEntriesProvider(widget.dateKey));
@@ -203,6 +396,12 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     // autoDispose 재구독으로 인한 깜빡임/재쿼리를 막는다.
     final presetsAsync = ref.watch(presetsProvider);
     final memoAsync = ref.watch(dayMemoProvider(widget.dateKey));
+    final sites = ref.watch(sitesProvider).valueOrNull ?? const <Site>[];
+    final siteById = ref.watch(siteByIdProvider);
+    final rates =
+        ref.watch(allRatesProvider).valueOrNull ?? const <SiteRateHistory>[];
+    final items = ref.watch(dayExtraItemsProvider(widget.dateKey));
+    final siteId = _effectiveSiteId(sites);
 
     // 메모 작성 중(저장 안 된 변경 있음)에는 스크림 탭/뒤로가기로 시트가
     // 그냥 닫히지 않게 확인을 거친다 — 무경고 유실 방지.
@@ -245,18 +444,20 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               switch (_mode) {
                 _SheetMode.list => _buildListMode(
                   context,
-                  entries,
-                  presetsAsync,
-                  memoAsync,
+                  entries: entries,
+                  presetsAsync: presetsAsync,
+                  memoAsync: memoAsync,
+                  sites: sites,
+                  siteById: siteById,
+                  rates: rates,
+                  items: items,
+                  siteId: siteId,
                 ),
-                _SheetMode.input => GongsuKeypad(
-                  initialCenti: _editing?.centiGongsu,
-                  saveLabel: _editing == null ? '저장' : '수정',
-                  onSave: _saveCustom,
-                  onCancel: () => setState(() {
-                    _editing = null;
-                    _mode = _SheetMode.list;
-                  }),
+                _SheetMode.input => _buildInputMode(
+                  context,
+                  sites: sites,
+                  siteById: siteById,
+                  siteId: siteId,
                 ),
                 _SheetMode.memo => _buildMemoMode(context),
               },
@@ -267,63 +468,121 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     );
   }
 
-  Future<void> _confirmDiscardMemo() async {
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('작성 중인 메모가 있어요'),
-        content: const Text('저장하지 않고 닫으면 지금 쓴 내용이 사라져요.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop('keep'),
-            child: const Text('계속 작성'),
+  Widget _buildInputMode(
+    BuildContext context, {
+    required List<Site> sites,
+    required Map<int, Site> siteById,
+    required int? siteId,
+  }) {
+    final editing = _editing;
+    final scheme = Theme.of(context).colorScheme;
+    // 수정 중인 기록은 스트림 갱신분(업체/오버라이드 변경)을 반영해서 보여준다.
+    final live = editing == null
+        ? null
+        : ref
+              .watch(dayEntriesProvider(widget.dateKey))
+              .where((e) => e.id == editing.id)
+              .firstOrNull;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (sites.isNotEmpty) ...[
+          SiteChips(
+            sites: sites,
+            selectedId: editing == null ? siteId : (live ?? editing).siteId,
+            onSelected: editing == null
+                ? _chooseSite
+                : (id) => _changeEntrySite(live ?? editing, id),
           ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop('discard'),
-            child: const Text('버리기'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop('save'),
-            child: const Text('저장 후 닫기'),
-          ),
+          const SizedBox(height: 8),
         ],
-      ),
+        if (editing != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: OutlinedButton.icon(
+              key: const ValueKey('override-button'),
+              icon: const Icon(Icons.price_change_outlined),
+              label: Text(
+                (live ?? editing).unitRateWonOverride == null
+                    ? '이 날만 단가 설정'
+                    : '이 날만 단가: ${formatWon((live ?? editing).unitRateWonOverride!)}',
+              ),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: (live ?? editing).unitRateWonOverride == null
+                    ? scheme.onSurfaceVariant
+                    : scheme.primary,
+              ),
+              onPressed: () => _editOverride(live ?? editing),
+            ),
+          ),
+        GongsuKeypad(
+          initialCenti: editing?.centiGongsu,
+          saveLabel: editing == null ? '저장' : '수정',
+          onSave: (centi) => _saveCustom(centi, siteId),
+          onCancel: () => setState(() {
+            _editing = null;
+            _mode = _SheetMode.list;
+          }),
+        ),
+      ],
     );
-    if (!mounted) return;
-    switch (choice) {
-      case 'save':
-        await _saveMemo();
-        if (mounted) Navigator.of(context).pop();
-      case 'discard':
-        Navigator.of(context).pop();
-      default:
-        break; // 계속 작성
-    }
   }
 
   Widget _buildListMode(
-    BuildContext context,
-    List<WorkEntry> entries,
-    AsyncValue<List<Preset>> presetsAsync,
-    AsyncValue<DayMemo?> memoAsync,
-  ) {
+    BuildContext context, {
+    required List<WorkEntry> entries,
+    required AsyncValue<List<Preset>> presetsAsync,
+    required AsyncValue<DayMemo?> memoAsync,
+    required List<Site> sites,
+    required Map<int, Site> siteById,
+    required List<SiteRateHistory> rates,
+    required List<DayExtraItem> items,
+    required int? siteId,
+  }) {
     final scheme = Theme.of(context).colorScheme;
+    final brightness = Theme.of(context).brightness;
     final presets = presetsAsync.valueOrNull ?? const <Preset>[];
     final memo = memoAsync.valueOrNull;
     // 큰글씨 배율에서 버튼 안 두 줄 텍스트가 잘리지 않도록 셀 비율을
     // 글자 배율에 맞춰 세로로 키운다.
     final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
     final presetAspectRatio = 1.9 / textScale.clamp(1.0, 2.2);
+
+    final histories = [
+      for (final r in rates)
+        (
+          siteId: r.siteId,
+          effectiveFromDateKey: r.effectiveFromDateKey,
+          dailyRateWon: r.dailyRateWon,
+        ),
+    ];
     var totalCenti = 0;
+    var dayLaborWon = 0;
+    var anyPriced = false;
     for (final e in entries) {
       totalCenti += e.centiGongsu;
+      final rate = resolveEntryRateWon(
+        dateKey: e.dateKey,
+        siteId: e.siteId,
+        unitRateWonOverride: e.unitRateWonOverride,
+        histories: histories,
+      );
+      if (rate != null) {
+        anyPriced = true;
+        dayLaborWon += calcAmountWon(
+          centiGongsu: e.centiGongsu,
+          dailyRateWon: rate,
+        );
+      }
     }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (_lastDeletedId != null)
+        if (_lastDeleted != null)
           Container(
             margin: const EdgeInsets.only(bottom: 8),
             padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -333,11 +592,19 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             ),
             child: Row(
               children: [
-                const Expanded(child: Text('기록 1건을 삭제했어요')),
+                Expanded(
+                  child: Text(
+                    _lastDeleted!.isItem ? '부가항목 1건을 삭제했어요' : '기록 1건을 삭제했어요',
+                  ),
+                ),
                 TextButton(onPressed: _undoDelete, child: const Text('실행 취소')),
               ],
             ),
           ),
+        if (sites.isNotEmpty) ...[
+          SiteChips(sites: sites, selectedId: siteId, onSelected: _chooseSite),
+          const SizedBox(height: 10),
+        ],
         if (entries.isNotEmpty) ...[
           for (final entry in entries)
             InkWell(
@@ -357,18 +624,36 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: MarkerPalette.colorOf(
-                          entry.colorIdSnapshot,
-                          brightness: Theme.of(context).brightness,
+                          siteById[entry.siteId]?.colorId ??
+                              entry.colorIdSnapshot,
+                          brightness: brightness,
                         ),
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        entry.labelSnapshot.isEmpty
-                            ? '직접 입력'
-                            : entry.labelSnapshot,
-                        style: const TextStyle(fontSize: 17),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            entry.labelSnapshot.isEmpty
+                                ? '직접 입력'
+                                : entry.labelSnapshot,
+                            style: const TextStyle(fontSize: 17),
+                          ),
+                          if (entry.siteId != null &&
+                              siteById[entry.siteId] != null)
+                            Text(
+                              siteById[entry.siteId]!.name +
+                                  (entry.unitRateWonOverride != null
+                                      ? ' · 단가 ${formatWon(entry.unitRateWonOverride!)}'
+                                      : ''),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     Text(
@@ -398,7 +683,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               children: [
                 const Text('합계', style: TextStyle(fontSize: 16)),
                 Text(
-                  '${formatGongsu(totalCenti)} 공수',
+                  anyPriced
+                      ? '${formatGongsu(totalCenti)} 공수 · ${formatWon(dayLaborWon)}'
+                      : '${formatGongsu(totalCenti)} 공수',
                   style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
@@ -449,7 +736,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                   style: FilledButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
                   ),
-                  onPressed: () => _addFromPreset(preset),
+                  onPressed: () => _addFromPreset(preset, siteId),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -463,7 +750,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                               shape: BoxShape.circle,
                               color: MarkerPalette.colorOf(
                                 preset.colorId,
-                                brightness: Theme.of(context).brightness,
+                                brightness: brightness,
                               ),
                             ),
                           ),
@@ -502,6 +789,8 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           ),
+        const SizedBox(height: 12),
+        _buildExtraItems(context, items, siteById, siteId),
         const SizedBox(height: 10),
         Row(
           children: [
@@ -545,6 +834,80 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           },
           child: const Text('프리셋 편집'),
         ),
+      ],
+    );
+  }
+
+  Widget _buildExtraItems(
+    BuildContext context,
+    List<DayExtraItem> items,
+    Map<int, Site> siteById,
+    int? siteId,
+  ) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                '부가항목 (일비·식비·공제)',
+                style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+              ),
+            ),
+            TextButton.icon(
+              key: const ValueKey('add-extra-item'),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('추가'),
+              onPressed: () => _addExtraItem(siteId),
+            ),
+          ],
+        ),
+        for (final item in items)
+          Padding(
+            key: ValueKey('item-${item.id}'),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              children: [
+                Icon(
+                  ExtraItemKind.fromCode(item.kind) == ExtraItemKind.deduction
+                      ? Icons.remove_circle_outline
+                      : Icons.add_circle_outline,
+                  size: 20,
+                  color:
+                      ExtraItemKind.fromCode(item.kind) ==
+                          ExtraItemKind.deduction
+                      ? scheme.error
+                      : scheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    item.siteId != null && siteById[item.siteId] != null
+                        ? '${item.label} · ${siteById[item.siteId]!.name}'
+                        : item.label,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ),
+                Text(
+                  formatWon(item.amountWon),
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                IconButton(
+                  tooltip: '삭제',
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                  onPressed: () => _deleteItem(item),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

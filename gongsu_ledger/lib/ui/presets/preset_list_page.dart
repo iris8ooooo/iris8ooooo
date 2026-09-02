@@ -13,7 +13,10 @@ class PresetListPage extends ConsumerWidget {
   const PresetListPage({super.key});
 
   Future<void> _confirmArchive(
-      BuildContext context, WidgetRef ref, Preset preset) async {
+    BuildContext context,
+    WidgetRef ref,
+    Preset preset,
+  ) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -46,8 +49,8 @@ class PresetListPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
         label: const Text('프리셋 추가'),
-        onPressed: () => Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const PresetEditPage())),
+        onPressed: () => Navigator.of(context)
+            .push(MaterialPageRoute(builder: (_) => const PresetEditPage())),
       ),
       body: presets.isEmpty && presetsAsync.hasValue
           ? const Center(child: Text('아래 버튼으로 프리셋을 추가하세요'))
@@ -69,22 +72,26 @@ class PresetListPage extends ConsumerWidget {
                     height: 20,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MarkerPalette.colorOf(preset.colorId,
-                          brightness: Theme.of(context).brightness),
+                      color: MarkerPalette.colorOf(
+                        preset.colorId,
+                        brightness: Theme.of(context).brightness,
+                      ),
                     ),
                   ),
                   title: Text(preset.name),
                   subtitle: Text('${formatGongsu(preset.centiGongsu)} 공수'),
-                  onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => PresetEditPage(preset: preset))),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PresetEditPage(preset: preset),
+                    ),
+                  ),
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
                         tooltip: '삭제',
                         icon: const Icon(Icons.delete_outline),
-                        onPressed: () =>
-                            _confirmArchive(context, ref, preset),
+                        onPressed: () => _confirmArchive(context, ref, preset),
                       ),
                       ReorderableDragStartListener(
                         index: index,

@@ -57,22 +57,21 @@ class _PresetEditPageState extends ConsumerState<PresetEditPage> {
     );
   }
 
-  bool get _canSave =>
-      _nameController.text.trim().isNotEmpty && _centi != null;
+  bool get _canSave => _nameController.text.trim().isNotEmpty && _centi != null;
 
   Future<void> _save() async {
     final repo = ref.read(presetRepoProvider);
     final name = _nameController.text;
     try {
       if (widget.preset == null) {
-        await repo.create(
-            name: name, centiGongsu: _centi!, colorId: _colorId);
+        await repo.create(name: name, centiGongsu: _centi!, colorId: _colorId);
       } else {
         await repo.update(
-            id: widget.preset!.id,
-            name: name,
-            centiGongsu: _centi!,
-            colorId: _colorId);
+          id: widget.preset!.id,
+          name: name,
+          centiGongsu: _centi!,
+          colorId: _colorId,
+        );
       }
     } catch (e) {
       if (!mounted) return;
@@ -156,18 +155,22 @@ class _PresetEditPageState extends ConsumerState<PresetEditPage> {
                     height: 44,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MarkerPalette.colorOf(entry.id,
-                          brightness: Theme.of(context).brightness),
+                      color: MarkerPalette.colorOf(
+                        entry.id,
+                        brightness: Theme.of(context).brightness,
+                      ),
                       border: _colorId == entry.id
                           ? Border.all(color: scheme.onSurface, width: 3)
                           : null,
                     ),
                     child: _colorId == entry.id
-                        ? Icon(Icons.check,
-                            color: Theme.of(context).brightness ==
-                                    Brightness.dark
+                        ? Icon(
+                            Icons.check,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
                                 ? Colors.black
-                                : Colors.white)
+                                : Colors.white,
+                          )
                         : null,
                   ),
                 ),

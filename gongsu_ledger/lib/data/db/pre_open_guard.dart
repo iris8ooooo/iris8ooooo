@@ -35,7 +35,9 @@ Future<void> runPreOpenGuard(File dbFile, int codeSchemaVersion) async {
 
   if (dbVersion > codeSchemaVersion) {
     throw DowngradeDetected(
-        dbVersion: dbVersion, codeVersion: codeSchemaVersion);
+      dbVersion: dbVersion,
+      codeVersion: codeSchemaVersion,
+    );
   }
   if (dbVersion > 0 && dbVersion < codeSchemaVersion) {
     _backupBeforeMigration(dbFile, codeSchemaVersion);

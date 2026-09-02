@@ -7,6 +7,7 @@ import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
 import '../backup/backup_page.dart';
 import '../presets/preset_list_page.dart';
+import '../sites/site_list_page.dart';
 import 'month_summary_card.dart';
 import 'month_view.dart';
 
@@ -73,22 +74,28 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           IconButton(
             tooltip: '오늘로 이동',
             icon: const Icon(Icons.today),
-            onPressed: () =>
-                _goToMonth(ymOfDateKey(dateKeyOf(DateTime.now()))),
+            onPressed: () => _goToMonth(ymOfDateKey(dateKeyOf(DateTime.now()))),
           ),
           PopupMenuButton<String>(
             tooltip: '메뉴',
             onSelected: (value) {
               switch (value) {
-                case 'presets':
-                  Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => const PresetListPage()));
-                case 'backup':
+                case 'sites':
                   Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const BackupPage()));
+                    MaterialPageRoute(builder: (_) => const SiteListPage()),
+                  );
+                case 'presets':
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const PresetListPage()),
+                  );
+                case 'backup':
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const BackupPage()));
               }
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(value: 'sites', child: Text('업체(현장) 관리')),
               PopupMenuItem(value: 'presets', child: Text('프리셋 관리')),
               PopupMenuItem(value: 'backup', child: Text('백업 / 복원')),
             ],
@@ -133,22 +140,24 @@ class _DbErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(isDowngrade ? Icons.system_update : Icons.error_outline,
-                size: 56, color: scheme.primary),
+            Icon(
+              isDowngrade ? Icons.system_update : Icons.error_outline,
+              size: 56,
+              color: scheme.primary,
+            ),
             const SizedBox(height: 16),
             Text(
               isDowngrade ? '앱 업데이트가 필요해요' : '기록을 불러오지 못했어요',
-              style:
-                  const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
               isDowngrade
                   ? '이 기록은 더 새로운 버전의 앱에서 만든 것이에요.\n'
-                      '앱을 최신 버전으로 업데이트하면 기록이 그대로 나타납니다.\n'
-                      '기록은 안전하게 보관되어 있어요.'
+                        '앱을 최신 버전으로 업데이트하면 기록이 그대로 나타납니다.\n'
+                        '기록은 안전하게 보관되어 있어요.'
                   : '기록은 기기에 안전하게 저장되어 있어요.\n'
-                      '앱을 완전히 종료한 뒤 다시 열어 보세요.',
+                        '앱을 완전히 종료한 뒤 다시 열어 보세요.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: scheme.onSurfaceVariant),
             ),

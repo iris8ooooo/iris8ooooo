@@ -14,7 +14,7 @@ class MarkerPalette {
   MarkerPalette._();
 
   static const List<({int id, String name, Color color, Color darkColor})>
-      entries = [
+  entries = [
     (id: 0, name: '파랑', color: Color(0xFF1565C0), darkColor: Color(0xFF64B5F6)),
     (id: 1, name: '초록', color: Color(0xFF2E7D32), darkColor: Color(0xFF81C784)),
     (id: 2, name: '주황', color: Color(0xFFEF6C00), darkColor: Color(0xFFFFB74D)),
@@ -23,10 +23,30 @@ class MarkerPalette {
     (id: 5, name: '자주', color: Color(0xFFC2185B), darkColor: Color(0xFFF06292)),
     (id: 6, name: '갈색', color: Color(0xFF5D4037), darkColor: Color(0xFFA1887F)),
     (id: 7, name: '남색', color: Color(0xFF283593), darkColor: Color(0xFF7986CB)),
-    (id: 8, name: '올리브', color: Color(0xFF827717), darkColor: Color(0xFFDCE775)),
-    (id: 9, name: '진빨강', color: Color(0xFFB71C1C), darkColor: Color(0xFFE57373)),
-    (id: 10, name: '회청', color: Color(0xFF455A64), darkColor: Color(0xFF90A4AE)),
-    (id: 11, name: '연두', color: Color(0xFF558B2F), darkColor: Color(0xFFAED581)),
+    (
+      id: 8,
+      name: '올리브',
+      color: Color(0xFF827717),
+      darkColor: Color(0xFFDCE775),
+    ),
+    (
+      id: 9,
+      name: '진빨강',
+      color: Color(0xFFB71C1C),
+      darkColor: Color(0xFFE57373),
+    ),
+    (
+      id: 10,
+      name: '회청',
+      color: Color(0xFF455A64),
+      darkColor: Color(0xFF90A4AE),
+    ),
+    (
+      id: 11,
+      name: '연두',
+      color: Color(0xFF558B2F),
+      darkColor: Color(0xFFAED581),
+    ),
   ];
 
   static ({int id, String name, Color color, Color darkColor}) _of(int id) =>

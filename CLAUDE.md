@@ -119,17 +119,28 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 ## 마일스톤 진행 상황
 
 - [x] **M1: 스캐폴드 + 달력 + 프리셋/커스텀 공수 입력 + 월 합계** — 완료 (2026-08-31, 테스트 76개 그린, 4차원 리뷰+적대적 검증 통과. 메모/프리셋 관리/간이 백업/다크모드 팔레트 포함)
-- [ ] **M2: 업체 관리 + 단가 이력 + 색상 표시 + 부가항목** ← 다음
-- [ ] M3: 세금 정산 + 기간 정산 + 통계 + 공휴일
+- [x] **M2: 업체 관리 + 단가 이력 + 색상 표시 + 부가항목** — 완료 (2026-09-02, 테스트 111개 그린. schemaVersion 2: Sites/SiteRateHistories/DayExtraItems 추가, v1→v2 골든 데이터 마이그레이션 테스트, 단가 해석(적용시작일 기준·오버라이드 우선) 순수 함수, 월 세전 수입 카드, 백업 봉투 확장(uid 재매핑))
+- [ ] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** ← 다음
+  - Sites에 taxMode 컬럼 ADD COLUMN(schemaVersion 3), 4대보험 요율 2026 조사, DayExtraItems.isTaxable 활용, MonthSummary.netWon 채우기
 - [ ] M4: 백업/복원 + PDF 증빙 + 캡쳐 공유
 - [ ] M5: 홈 위젯 (iOS/Android)
 - [ ] M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비
 
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것.
 
+### M2에서 확정된 규칙
+- 단가는 기록에 저장하지 않는다. `SiteRateHistories`에서 "날짜 이하 가장 늦은 effectiveFrom" 행으로 조회 시점 해석 (`domain/rate_resolver.dart`). 기록별 `unitRateWonOverride`가 있으면 그것이 우선
+- 업체 생성 시 기본 단가는 effectiveFrom = 20000101 이력으로 저장 (과거 전체 적용). 같은 업체·같은 시작일 재설정은 갱신(중복 이력 금지)
+- 부가항목 금액은 항상 0 이상, 방향은 kind('allowance'/'deduction')로. `isTaxable`은 M3 예약(기본 false)
+- 세전 예상 수입 = 공수×단가(해석된 것만) + 가산 − 공제. 단가 미설정 공수는 `unpricedCenti`로 카드에 "제외" 표시. 금액 정보가 하나도 없으면 카드에 금액 줄 자체를 숨김
+- 달력 점 색: 업체 붙은 기록은 업체 색(live), 아니면 프리셋 색 스냅샷
+- 마지막 선택 업체는 AppSettings `last_site_id`에 저장 → 다음 입력 기본값
+- 마이그레이션 테스트: `drift_schemas/drift_schema_vN.json` 덤프 커밋 + `test/data/generated_migrations/`(drift_dev schema generate) + `test/data/migration_test.dart`의 골든 데이터 테스트. 스키마 바꿀 때마다 덤프·generate 재실행 필수
+- 무료 티어 "업체 3개까지" 제한은 M6 IAP와 함께 넣는다 (지금은 무제한)
+
 ## 백로그
 
-- 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안, M2 검토)
+- 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안)
 - 저가 실기기(갤럭시 A 시리즈) `--profile` 콜드 스타트 측정을 마일스톤 완료 게이트로 (오너 실기기 확보 시)
 
 ## 테스트 작성 주의 (재발 방지)

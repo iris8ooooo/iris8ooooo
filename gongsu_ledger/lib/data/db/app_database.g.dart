@@ -1796,6 +1796,1739 @@ class AppSettingsCompanion extends UpdateCompanion<AppSetting> {
   }
 }
 
+class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SitesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uidMeta = const VerificationMeta('uid');
+  @override
+  late final GeneratedColumn<String> uid = GeneratedColumn<String>(
+    'uid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 36,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _nameMeta = const VerificationMeta('name');
+  @override
+  late final GeneratedColumn<String> name = GeneratedColumn<String>(
+    'name',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 30,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _colorIdMeta = const VerificationMeta(
+    'colorId',
+  );
+  @override
+  late final GeneratedColumn<int> colorId = GeneratedColumn<int>(
+    'color_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _sortOrderMeta = const VerificationMeta(
+    'sortOrder',
+  );
+  @override
+  late final GeneratedColumn<int> sortOrder = GeneratedColumn<int>(
+    'sort_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isArchivedMeta = const VerificationMeta(
+    'isArchived',
+  );
+  @override
+  late final GeneratedColumn<bool> isArchived = GeneratedColumn<bool>(
+    'is_archived',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_archived" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMillisMeta = const VerificationMeta(
+    'createdAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtMillis = GeneratedColumn<int>(
+    'created_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMillisMeta = const VerificationMeta(
+    'updatedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAtMillis = GeneratedColumn<int>(
+    'updated_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uid,
+    name,
+    colorId,
+    sortOrder,
+    isArchived,
+    createdAtMillis,
+    updatedAtMillis,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sites';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Site> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uid')) {
+      context.handle(
+        _uidMeta,
+        uid.isAcceptableOrUnknown(data['uid']!, _uidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uidMeta);
+    }
+    if (data.containsKey('name')) {
+      context.handle(
+        _nameMeta,
+        name.isAcceptableOrUnknown(data['name']!, _nameMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_nameMeta);
+    }
+    if (data.containsKey('color_id')) {
+      context.handle(
+        _colorIdMeta,
+        colorId.isAcceptableOrUnknown(data['color_id']!, _colorIdMeta),
+      );
+    }
+    if (data.containsKey('sort_order')) {
+      context.handle(
+        _sortOrderMeta,
+        sortOrder.isAcceptableOrUnknown(data['sort_order']!, _sortOrderMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sortOrderMeta);
+    }
+    if (data.containsKey('is_archived')) {
+      context.handle(
+        _isArchivedMeta,
+        isArchived.isAcceptableOrUnknown(data['is_archived']!, _isArchivedMeta),
+      );
+    }
+    if (data.containsKey('created_at_millis')) {
+      context.handle(
+        _createdAtMillisMeta,
+        createdAtMillis.isAcceptableOrUnknown(
+          data['created_at_millis']!,
+          _createdAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMillisMeta);
+    }
+    if (data.containsKey('updated_at_millis')) {
+      context.handle(
+        _updatedAtMillisMeta,
+        updatedAtMillis.isAcceptableOrUnknown(
+          data['updated_at_millis']!,
+          _updatedAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMillisMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  Site map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Site(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uid'],
+      )!,
+      name: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}name'],
+      )!,
+      colorId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}color_id'],
+      )!,
+      sortOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}sort_order'],
+      )!,
+      isArchived: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_archived'],
+      )!,
+      createdAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_millis'],
+      )!,
+      updatedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at_millis'],
+      )!,
+    );
+  }
+
+  @override
+  $SitesTable createAlias(String alias) {
+    return $SitesTable(attachedDatabase, alias);
+  }
+}
+
+class Site extends DataClass implements Insertable<Site> {
+  final int id;
+  final String uid;
+  final String name;
+
+  /// MarkerPalette id.
+  final int colorId;
+  final int sortOrder;
+  final bool isArchived;
+  final int createdAtMillis;
+  final int updatedAtMillis;
+  const Site({
+    required this.id,
+    required this.uid,
+    required this.name,
+    required this.colorId,
+    required this.sortOrder,
+    required this.isArchived,
+    required this.createdAtMillis,
+    required this.updatedAtMillis,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uid'] = Variable<String>(uid);
+    map['name'] = Variable<String>(name);
+    map['color_id'] = Variable<int>(colorId);
+    map['sort_order'] = Variable<int>(sortOrder);
+    map['is_archived'] = Variable<bool>(isArchived);
+    map['created_at_millis'] = Variable<int>(createdAtMillis);
+    map['updated_at_millis'] = Variable<int>(updatedAtMillis);
+    return map;
+  }
+
+  SitesCompanion toCompanion(bool nullToAbsent) {
+    return SitesCompanion(
+      id: Value(id),
+      uid: Value(uid),
+      name: Value(name),
+      colorId: Value(colorId),
+      sortOrder: Value(sortOrder),
+      isArchived: Value(isArchived),
+      createdAtMillis: Value(createdAtMillis),
+      updatedAtMillis: Value(updatedAtMillis),
+    );
+  }
+
+  factory Site.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Site(
+      id: serializer.fromJson<int>(json['id']),
+      uid: serializer.fromJson<String>(json['uid']),
+      name: serializer.fromJson<String>(json['name']),
+      colorId: serializer.fromJson<int>(json['colorId']),
+      sortOrder: serializer.fromJson<int>(json['sortOrder']),
+      isArchived: serializer.fromJson<bool>(json['isArchived']),
+      createdAtMillis: serializer.fromJson<int>(json['createdAtMillis']),
+      updatedAtMillis: serializer.fromJson<int>(json['updatedAtMillis']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uid': serializer.toJson<String>(uid),
+      'name': serializer.toJson<String>(name),
+      'colorId': serializer.toJson<int>(colorId),
+      'sortOrder': serializer.toJson<int>(sortOrder),
+      'isArchived': serializer.toJson<bool>(isArchived),
+      'createdAtMillis': serializer.toJson<int>(createdAtMillis),
+      'updatedAtMillis': serializer.toJson<int>(updatedAtMillis),
+    };
+  }
+
+  Site copyWith({
+    int? id,
+    String? uid,
+    String? name,
+    int? colorId,
+    int? sortOrder,
+    bool? isArchived,
+    int? createdAtMillis,
+    int? updatedAtMillis,
+  }) => Site(
+    id: id ?? this.id,
+    uid: uid ?? this.uid,
+    name: name ?? this.name,
+    colorId: colorId ?? this.colorId,
+    sortOrder: sortOrder ?? this.sortOrder,
+    isArchived: isArchived ?? this.isArchived,
+    createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+    updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+  );
+  Site copyWithCompanion(SitesCompanion data) {
+    return Site(
+      id: data.id.present ? data.id.value : this.id,
+      uid: data.uid.present ? data.uid.value : this.uid,
+      name: data.name.present ? data.name.value : this.name,
+      colorId: data.colorId.present ? data.colorId.value : this.colorId,
+      sortOrder: data.sortOrder.present ? data.sortOrder.value : this.sortOrder,
+      isArchived: data.isArchived.present
+          ? data.isArchived.value
+          : this.isArchived,
+      createdAtMillis: data.createdAtMillis.present
+          ? data.createdAtMillis.value
+          : this.createdAtMillis,
+      updatedAtMillis: data.updatedAtMillis.present
+          ? data.updatedAtMillis.value
+          : this.updatedAtMillis,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Site(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('name: $name, ')
+          ..write('colorId: $colorId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uid,
+    name,
+    colorId,
+    sortOrder,
+    isArchived,
+    createdAtMillis,
+    updatedAtMillis,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Site &&
+          other.id == this.id &&
+          other.uid == this.uid &&
+          other.name == this.name &&
+          other.colorId == this.colorId &&
+          other.sortOrder == this.sortOrder &&
+          other.isArchived == this.isArchived &&
+          other.createdAtMillis == this.createdAtMillis &&
+          other.updatedAtMillis == this.updatedAtMillis);
+}
+
+class SitesCompanion extends UpdateCompanion<Site> {
+  final Value<int> id;
+  final Value<String> uid;
+  final Value<String> name;
+  final Value<int> colorId;
+  final Value<int> sortOrder;
+  final Value<bool> isArchived;
+  final Value<int> createdAtMillis;
+  final Value<int> updatedAtMillis;
+  const SitesCompanion({
+    this.id = const Value.absent(),
+    this.uid = const Value.absent(),
+    this.name = const Value.absent(),
+    this.colorId = const Value.absent(),
+    this.sortOrder = const Value.absent(),
+    this.isArchived = const Value.absent(),
+    this.createdAtMillis = const Value.absent(),
+    this.updatedAtMillis = const Value.absent(),
+  });
+  SitesCompanion.insert({
+    this.id = const Value.absent(),
+    required String uid,
+    required String name,
+    this.colorId = const Value.absent(),
+    required int sortOrder,
+    this.isArchived = const Value.absent(),
+    required int createdAtMillis,
+    required int updatedAtMillis,
+  }) : uid = Value(uid),
+       name = Value(name),
+       sortOrder = Value(sortOrder),
+       createdAtMillis = Value(createdAtMillis),
+       updatedAtMillis = Value(updatedAtMillis);
+  static Insertable<Site> custom({
+    Expression<int>? id,
+    Expression<String>? uid,
+    Expression<String>? name,
+    Expression<int>? colorId,
+    Expression<int>? sortOrder,
+    Expression<bool>? isArchived,
+    Expression<int>? createdAtMillis,
+    Expression<int>? updatedAtMillis,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uid != null) 'uid': uid,
+      if (name != null) 'name': name,
+      if (colorId != null) 'color_id': colorId,
+      if (sortOrder != null) 'sort_order': sortOrder,
+      if (isArchived != null) 'is_archived': isArchived,
+      if (createdAtMillis != null) 'created_at_millis': createdAtMillis,
+      if (updatedAtMillis != null) 'updated_at_millis': updatedAtMillis,
+    });
+  }
+
+  SitesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uid,
+    Value<String>? name,
+    Value<int>? colorId,
+    Value<int>? sortOrder,
+    Value<bool>? isArchived,
+    Value<int>? createdAtMillis,
+    Value<int>? updatedAtMillis,
+  }) {
+    return SitesCompanion(
+      id: id ?? this.id,
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      colorId: colorId ?? this.colorId,
+      sortOrder: sortOrder ?? this.sortOrder,
+      isArchived: isArchived ?? this.isArchived,
+      createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+      updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uid.present) {
+      map['uid'] = Variable<String>(uid.value);
+    }
+    if (name.present) {
+      map['name'] = Variable<String>(name.value);
+    }
+    if (colorId.present) {
+      map['color_id'] = Variable<int>(colorId.value);
+    }
+    if (sortOrder.present) {
+      map['sort_order'] = Variable<int>(sortOrder.value);
+    }
+    if (isArchived.present) {
+      map['is_archived'] = Variable<bool>(isArchived.value);
+    }
+    if (createdAtMillis.present) {
+      map['created_at_millis'] = Variable<int>(createdAtMillis.value);
+    }
+    if (updatedAtMillis.present) {
+      map['updated_at_millis'] = Variable<int>(updatedAtMillis.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SitesCompanion(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('name: $name, ')
+          ..write('colorId: $colorId, ')
+          ..write('sortOrder: $sortOrder, ')
+          ..write('isArchived: $isArchived, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SiteRateHistoriesTable extends SiteRateHistories
+    with TableInfo<$SiteRateHistoriesTable, SiteRateHistory> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SiteRateHistoriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uidMeta = const VerificationMeta('uid');
+  @override
+  late final GeneratedColumn<String> uid = GeneratedColumn<String>(
+    'uid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 36,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<int> siteId = GeneratedColumn<int>(
+    'site_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _effectiveFromDateKeyMeta =
+      const VerificationMeta('effectiveFromDateKey');
+  @override
+  late final GeneratedColumn<int> effectiveFromDateKey = GeneratedColumn<int>(
+    'effective_from_date_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dailyRateWonMeta = const VerificationMeta(
+    'dailyRateWon',
+  );
+  @override
+  late final GeneratedColumn<int> dailyRateWon = GeneratedColumn<int>(
+    'daily_rate_won',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMillisMeta = const VerificationMeta(
+    'createdAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtMillis = GeneratedColumn<int>(
+    'created_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMillisMeta = const VerificationMeta(
+    'updatedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAtMillis = GeneratedColumn<int>(
+    'updated_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMillisMeta = const VerificationMeta(
+    'deletedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> deletedAtMillis = GeneratedColumn<int>(
+    'deleted_at_millis',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uid,
+    siteId,
+    effectiveFromDateKey,
+    dailyRateWon,
+    createdAtMillis,
+    updatedAtMillis,
+    deletedAtMillis,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'site_rate_histories';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SiteRateHistory> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uid')) {
+      context.handle(
+        _uidMeta,
+        uid.isAcceptableOrUnknown(data['uid']!, _uidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uidMeta);
+    }
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_siteIdMeta);
+    }
+    if (data.containsKey('effective_from_date_key')) {
+      context.handle(
+        _effectiveFromDateKeyMeta,
+        effectiveFromDateKey.isAcceptableOrUnknown(
+          data['effective_from_date_key']!,
+          _effectiveFromDateKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_effectiveFromDateKeyMeta);
+    }
+    if (data.containsKey('daily_rate_won')) {
+      context.handle(
+        _dailyRateWonMeta,
+        dailyRateWon.isAcceptableOrUnknown(
+          data['daily_rate_won']!,
+          _dailyRateWonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_dailyRateWonMeta);
+    }
+    if (data.containsKey('created_at_millis')) {
+      context.handle(
+        _createdAtMillisMeta,
+        createdAtMillis.isAcceptableOrUnknown(
+          data['created_at_millis']!,
+          _createdAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMillisMeta);
+    }
+    if (data.containsKey('updated_at_millis')) {
+      context.handle(
+        _updatedAtMillisMeta,
+        updatedAtMillis.isAcceptableOrUnknown(
+          data['updated_at_millis']!,
+          _updatedAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMillisMeta);
+    }
+    if (data.containsKey('deleted_at_millis')) {
+      context.handle(
+        _deletedAtMillisMeta,
+        deletedAtMillis.isAcceptableOrUnknown(
+          data['deleted_at_millis']!,
+          _deletedAtMillisMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  SiteRateHistory map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SiteRateHistory(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uid'],
+      )!,
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}site_id'],
+      )!,
+      effectiveFromDateKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}effective_from_date_key'],
+      )!,
+      dailyRateWon: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}daily_rate_won'],
+      )!,
+      createdAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_millis'],
+      )!,
+      updatedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at_millis'],
+      )!,
+      deletedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at_millis'],
+      ),
+    );
+  }
+
+  @override
+  $SiteRateHistoriesTable createAlias(String alias) {
+    return $SiteRateHistoriesTable(attachedDatabase, alias);
+  }
+}
+
+class SiteRateHistory extends DataClass implements Insertable<SiteRateHistory> {
+  final int id;
+  final String uid;
+  final int siteId;
+
+  /// yyyyMMdd. 이 날짜부터(포함) 적용.
+  final int effectiveFromDateKey;
+
+  /// 1.0공수당 원.
+  final int dailyRateWon;
+  final int createdAtMillis;
+  final int updatedAtMillis;
+
+  /// soft delete. 잘못 넣은 이력을 지울 때도 물리 삭제하지 않는다.
+  final int? deletedAtMillis;
+  const SiteRateHistory({
+    required this.id,
+    required this.uid,
+    required this.siteId,
+    required this.effectiveFromDateKey,
+    required this.dailyRateWon,
+    required this.createdAtMillis,
+    required this.updatedAtMillis,
+    this.deletedAtMillis,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uid'] = Variable<String>(uid);
+    map['site_id'] = Variable<int>(siteId);
+    map['effective_from_date_key'] = Variable<int>(effectiveFromDateKey);
+    map['daily_rate_won'] = Variable<int>(dailyRateWon);
+    map['created_at_millis'] = Variable<int>(createdAtMillis);
+    map['updated_at_millis'] = Variable<int>(updatedAtMillis);
+    if (!nullToAbsent || deletedAtMillis != null) {
+      map['deleted_at_millis'] = Variable<int>(deletedAtMillis);
+    }
+    return map;
+  }
+
+  SiteRateHistoriesCompanion toCompanion(bool nullToAbsent) {
+    return SiteRateHistoriesCompanion(
+      id: Value(id),
+      uid: Value(uid),
+      siteId: Value(siteId),
+      effectiveFromDateKey: Value(effectiveFromDateKey),
+      dailyRateWon: Value(dailyRateWon),
+      createdAtMillis: Value(createdAtMillis),
+      updatedAtMillis: Value(updatedAtMillis),
+      deletedAtMillis: deletedAtMillis == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAtMillis),
+    );
+  }
+
+  factory SiteRateHistory.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SiteRateHistory(
+      id: serializer.fromJson<int>(json['id']),
+      uid: serializer.fromJson<String>(json['uid']),
+      siteId: serializer.fromJson<int>(json['siteId']),
+      effectiveFromDateKey: serializer.fromJson<int>(
+        json['effectiveFromDateKey'],
+      ),
+      dailyRateWon: serializer.fromJson<int>(json['dailyRateWon']),
+      createdAtMillis: serializer.fromJson<int>(json['createdAtMillis']),
+      updatedAtMillis: serializer.fromJson<int>(json['updatedAtMillis']),
+      deletedAtMillis: serializer.fromJson<int?>(json['deletedAtMillis']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uid': serializer.toJson<String>(uid),
+      'siteId': serializer.toJson<int>(siteId),
+      'effectiveFromDateKey': serializer.toJson<int>(effectiveFromDateKey),
+      'dailyRateWon': serializer.toJson<int>(dailyRateWon),
+      'createdAtMillis': serializer.toJson<int>(createdAtMillis),
+      'updatedAtMillis': serializer.toJson<int>(updatedAtMillis),
+      'deletedAtMillis': serializer.toJson<int?>(deletedAtMillis),
+    };
+  }
+
+  SiteRateHistory copyWith({
+    int? id,
+    String? uid,
+    int? siteId,
+    int? effectiveFromDateKey,
+    int? dailyRateWon,
+    int? createdAtMillis,
+    int? updatedAtMillis,
+    Value<int?> deletedAtMillis = const Value.absent(),
+  }) => SiteRateHistory(
+    id: id ?? this.id,
+    uid: uid ?? this.uid,
+    siteId: siteId ?? this.siteId,
+    effectiveFromDateKey: effectiveFromDateKey ?? this.effectiveFromDateKey,
+    dailyRateWon: dailyRateWon ?? this.dailyRateWon,
+    createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+    updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+    deletedAtMillis: deletedAtMillis.present
+        ? deletedAtMillis.value
+        : this.deletedAtMillis,
+  );
+  SiteRateHistory copyWithCompanion(SiteRateHistoriesCompanion data) {
+    return SiteRateHistory(
+      id: data.id.present ? data.id.value : this.id,
+      uid: data.uid.present ? data.uid.value : this.uid,
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      effectiveFromDateKey: data.effectiveFromDateKey.present
+          ? data.effectiveFromDateKey.value
+          : this.effectiveFromDateKey,
+      dailyRateWon: data.dailyRateWon.present
+          ? data.dailyRateWon.value
+          : this.dailyRateWon,
+      createdAtMillis: data.createdAtMillis.present
+          ? data.createdAtMillis.value
+          : this.createdAtMillis,
+      updatedAtMillis: data.updatedAtMillis.present
+          ? data.updatedAtMillis.value
+          : this.updatedAtMillis,
+      deletedAtMillis: data.deletedAtMillis.present
+          ? data.deletedAtMillis.value
+          : this.deletedAtMillis,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SiteRateHistory(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('siteId: $siteId, ')
+          ..write('effectiveFromDateKey: $effectiveFromDateKey, ')
+          ..write('dailyRateWon: $dailyRateWon, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('deletedAtMillis: $deletedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uid,
+    siteId,
+    effectiveFromDateKey,
+    dailyRateWon,
+    createdAtMillis,
+    updatedAtMillis,
+    deletedAtMillis,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SiteRateHistory &&
+          other.id == this.id &&
+          other.uid == this.uid &&
+          other.siteId == this.siteId &&
+          other.effectiveFromDateKey == this.effectiveFromDateKey &&
+          other.dailyRateWon == this.dailyRateWon &&
+          other.createdAtMillis == this.createdAtMillis &&
+          other.updatedAtMillis == this.updatedAtMillis &&
+          other.deletedAtMillis == this.deletedAtMillis);
+}
+
+class SiteRateHistoriesCompanion extends UpdateCompanion<SiteRateHistory> {
+  final Value<int> id;
+  final Value<String> uid;
+  final Value<int> siteId;
+  final Value<int> effectiveFromDateKey;
+  final Value<int> dailyRateWon;
+  final Value<int> createdAtMillis;
+  final Value<int> updatedAtMillis;
+  final Value<int?> deletedAtMillis;
+  const SiteRateHistoriesCompanion({
+    this.id = const Value.absent(),
+    this.uid = const Value.absent(),
+    this.siteId = const Value.absent(),
+    this.effectiveFromDateKey = const Value.absent(),
+    this.dailyRateWon = const Value.absent(),
+    this.createdAtMillis = const Value.absent(),
+    this.updatedAtMillis = const Value.absent(),
+    this.deletedAtMillis = const Value.absent(),
+  });
+  SiteRateHistoriesCompanion.insert({
+    this.id = const Value.absent(),
+    required String uid,
+    required int siteId,
+    required int effectiveFromDateKey,
+    required int dailyRateWon,
+    required int createdAtMillis,
+    required int updatedAtMillis,
+    this.deletedAtMillis = const Value.absent(),
+  }) : uid = Value(uid),
+       siteId = Value(siteId),
+       effectiveFromDateKey = Value(effectiveFromDateKey),
+       dailyRateWon = Value(dailyRateWon),
+       createdAtMillis = Value(createdAtMillis),
+       updatedAtMillis = Value(updatedAtMillis);
+  static Insertable<SiteRateHistory> custom({
+    Expression<int>? id,
+    Expression<String>? uid,
+    Expression<int>? siteId,
+    Expression<int>? effectiveFromDateKey,
+    Expression<int>? dailyRateWon,
+    Expression<int>? createdAtMillis,
+    Expression<int>? updatedAtMillis,
+    Expression<int>? deletedAtMillis,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uid != null) 'uid': uid,
+      if (siteId != null) 'site_id': siteId,
+      if (effectiveFromDateKey != null)
+        'effective_from_date_key': effectiveFromDateKey,
+      if (dailyRateWon != null) 'daily_rate_won': dailyRateWon,
+      if (createdAtMillis != null) 'created_at_millis': createdAtMillis,
+      if (updatedAtMillis != null) 'updated_at_millis': updatedAtMillis,
+      if (deletedAtMillis != null) 'deleted_at_millis': deletedAtMillis,
+    });
+  }
+
+  SiteRateHistoriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uid,
+    Value<int>? siteId,
+    Value<int>? effectiveFromDateKey,
+    Value<int>? dailyRateWon,
+    Value<int>? createdAtMillis,
+    Value<int>? updatedAtMillis,
+    Value<int?>? deletedAtMillis,
+  }) {
+    return SiteRateHistoriesCompanion(
+      id: id ?? this.id,
+      uid: uid ?? this.uid,
+      siteId: siteId ?? this.siteId,
+      effectiveFromDateKey: effectiveFromDateKey ?? this.effectiveFromDateKey,
+      dailyRateWon: dailyRateWon ?? this.dailyRateWon,
+      createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+      updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+      deletedAtMillis: deletedAtMillis ?? this.deletedAtMillis,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uid.present) {
+      map['uid'] = Variable<String>(uid.value);
+    }
+    if (siteId.present) {
+      map['site_id'] = Variable<int>(siteId.value);
+    }
+    if (effectiveFromDateKey.present) {
+      map['effective_from_date_key'] = Variable<int>(
+        effectiveFromDateKey.value,
+      );
+    }
+    if (dailyRateWon.present) {
+      map['daily_rate_won'] = Variable<int>(dailyRateWon.value);
+    }
+    if (createdAtMillis.present) {
+      map['created_at_millis'] = Variable<int>(createdAtMillis.value);
+    }
+    if (updatedAtMillis.present) {
+      map['updated_at_millis'] = Variable<int>(updatedAtMillis.value);
+    }
+    if (deletedAtMillis.present) {
+      map['deleted_at_millis'] = Variable<int>(deletedAtMillis.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SiteRateHistoriesCompanion(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('siteId: $siteId, ')
+          ..write('effectiveFromDateKey: $effectiveFromDateKey, ')
+          ..write('dailyRateWon: $dailyRateWon, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('deletedAtMillis: $deletedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $DayExtraItemsTable extends DayExtraItems
+    with TableInfo<$DayExtraItemsTable, DayExtraItem> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DayExtraItemsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _uidMeta = const VerificationMeta('uid');
+  @override
+  late final GeneratedColumn<String> uid = GeneratedColumn<String>(
+    'uid',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 36,
+      maxTextLength: 36,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways('UNIQUE'),
+  );
+  static const VerificationMeta _dateKeyMeta = const VerificationMeta(
+    'dateKey',
+  );
+  @override
+  late final GeneratedColumn<int> dateKey = GeneratedColumn<int>(
+    'date_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _siteIdMeta = const VerificationMeta('siteId');
+  @override
+  late final GeneratedColumn<int> siteId = GeneratedColumn<int>(
+    'site_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
+  @override
+  late final GeneratedColumn<String> kind = GeneratedColumn<String>(
+    'kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _labelMeta = const VerificationMeta('label');
+  @override
+  late final GeneratedColumn<String> label = GeneratedColumn<String>(
+    'label',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 1,
+      maxTextLength: 20,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _amountWonMeta = const VerificationMeta(
+    'amountWon',
+  );
+  @override
+  late final GeneratedColumn<int> amountWon = GeneratedColumn<int>(
+    'amount_won',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _isTaxableMeta = const VerificationMeta(
+    'isTaxable',
+  );
+  @override
+  late final GeneratedColumn<bool> isTaxable = GeneratedColumn<bool>(
+    'is_taxable',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_taxable" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _createdAtMillisMeta = const VerificationMeta(
+    'createdAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> createdAtMillis = GeneratedColumn<int>(
+    'created_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMillisMeta = const VerificationMeta(
+    'updatedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> updatedAtMillis = GeneratedColumn<int>(
+    'updated_at_millis',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _deletedAtMillisMeta = const VerificationMeta(
+    'deletedAtMillis',
+  );
+  @override
+  late final GeneratedColumn<int> deletedAtMillis = GeneratedColumn<int>(
+    'deleted_at_millis',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    uid,
+    dateKey,
+    siteId,
+    kind,
+    label,
+    amountWon,
+    isTaxable,
+    createdAtMillis,
+    updatedAtMillis,
+    deletedAtMillis,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'day_extra_items';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DayExtraItem> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('uid')) {
+      context.handle(
+        _uidMeta,
+        uid.isAcceptableOrUnknown(data['uid']!, _uidMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_uidMeta);
+    }
+    if (data.containsKey('date_key')) {
+      context.handle(
+        _dateKeyMeta,
+        dateKey.isAcceptableOrUnknown(data['date_key']!, _dateKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateKeyMeta);
+    }
+    if (data.containsKey('site_id')) {
+      context.handle(
+        _siteIdMeta,
+        siteId.isAcceptableOrUnknown(data['site_id']!, _siteIdMeta),
+      );
+    }
+    if (data.containsKey('kind')) {
+      context.handle(
+        _kindMeta,
+        kind.isAcceptableOrUnknown(data['kind']!, _kindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_kindMeta);
+    }
+    if (data.containsKey('label')) {
+      context.handle(
+        _labelMeta,
+        label.isAcceptableOrUnknown(data['label']!, _labelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_labelMeta);
+    }
+    if (data.containsKey('amount_won')) {
+      context.handle(
+        _amountWonMeta,
+        amountWon.isAcceptableOrUnknown(data['amount_won']!, _amountWonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountWonMeta);
+    }
+    if (data.containsKey('is_taxable')) {
+      context.handle(
+        _isTaxableMeta,
+        isTaxable.isAcceptableOrUnknown(data['is_taxable']!, _isTaxableMeta),
+      );
+    }
+    if (data.containsKey('created_at_millis')) {
+      context.handle(
+        _createdAtMillisMeta,
+        createdAtMillis.isAcceptableOrUnknown(
+          data['created_at_millis']!,
+          _createdAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMillisMeta);
+    }
+    if (data.containsKey('updated_at_millis')) {
+      context.handle(
+        _updatedAtMillisMeta,
+        updatedAtMillis.isAcceptableOrUnknown(
+          data['updated_at_millis']!,
+          _updatedAtMillisMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMillisMeta);
+    }
+    if (data.containsKey('deleted_at_millis')) {
+      context.handle(
+        _deletedAtMillisMeta,
+        deletedAtMillis.isAcceptableOrUnknown(
+          data['deleted_at_millis']!,
+          _deletedAtMillisMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  DayExtraItem map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DayExtraItem(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      uid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}uid'],
+      )!,
+      dateKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}date_key'],
+      )!,
+      siteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}site_id'],
+      ),
+      kind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}kind'],
+      )!,
+      label: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}label'],
+      )!,
+      amountWon: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}amount_won'],
+      )!,
+      isTaxable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_taxable'],
+      )!,
+      createdAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}created_at_millis'],
+      )!,
+      updatedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}updated_at_millis'],
+      )!,
+      deletedAtMillis: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}deleted_at_millis'],
+      ),
+    );
+  }
+
+  @override
+  $DayExtraItemsTable createAlias(String alias) {
+    return $DayExtraItemsTable(attachedDatabase, alias);
+  }
+}
+
+class DayExtraItem extends DataClass implements Insertable<DayExtraItem> {
+  final int id;
+  final String uid;
+  final int dateKey;
+
+  /// 업체 귀속. NULL = 업체 무관.
+  final int? siteId;
+
+  /// 'allowance'(가산) | 'deduction'(차감). enum ordinal이 아닌 안정된 문자열.
+  final String kind;
+  final String label;
+  final int amountWon;
+
+  /// M3 예약: 세금 계산에 포함할지. 기본 false(일비/식비는 통상 비과세).
+  final bool isTaxable;
+  final int createdAtMillis;
+  final int updatedAtMillis;
+  final int? deletedAtMillis;
+  const DayExtraItem({
+    required this.id,
+    required this.uid,
+    required this.dateKey,
+    this.siteId,
+    required this.kind,
+    required this.label,
+    required this.amountWon,
+    required this.isTaxable,
+    required this.createdAtMillis,
+    required this.updatedAtMillis,
+    this.deletedAtMillis,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['uid'] = Variable<String>(uid);
+    map['date_key'] = Variable<int>(dateKey);
+    if (!nullToAbsent || siteId != null) {
+      map['site_id'] = Variable<int>(siteId);
+    }
+    map['kind'] = Variable<String>(kind);
+    map['label'] = Variable<String>(label);
+    map['amount_won'] = Variable<int>(amountWon);
+    map['is_taxable'] = Variable<bool>(isTaxable);
+    map['created_at_millis'] = Variable<int>(createdAtMillis);
+    map['updated_at_millis'] = Variable<int>(updatedAtMillis);
+    if (!nullToAbsent || deletedAtMillis != null) {
+      map['deleted_at_millis'] = Variable<int>(deletedAtMillis);
+    }
+    return map;
+  }
+
+  DayExtraItemsCompanion toCompanion(bool nullToAbsent) {
+    return DayExtraItemsCompanion(
+      id: Value(id),
+      uid: Value(uid),
+      dateKey: Value(dateKey),
+      siteId: siteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(siteId),
+      kind: Value(kind),
+      label: Value(label),
+      amountWon: Value(amountWon),
+      isTaxable: Value(isTaxable),
+      createdAtMillis: Value(createdAtMillis),
+      updatedAtMillis: Value(updatedAtMillis),
+      deletedAtMillis: deletedAtMillis == null && nullToAbsent
+          ? const Value.absent()
+          : Value(deletedAtMillis),
+    );
+  }
+
+  factory DayExtraItem.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DayExtraItem(
+      id: serializer.fromJson<int>(json['id']),
+      uid: serializer.fromJson<String>(json['uid']),
+      dateKey: serializer.fromJson<int>(json['dateKey']),
+      siteId: serializer.fromJson<int?>(json['siteId']),
+      kind: serializer.fromJson<String>(json['kind']),
+      label: serializer.fromJson<String>(json['label']),
+      amountWon: serializer.fromJson<int>(json['amountWon']),
+      isTaxable: serializer.fromJson<bool>(json['isTaxable']),
+      createdAtMillis: serializer.fromJson<int>(json['createdAtMillis']),
+      updatedAtMillis: serializer.fromJson<int>(json['updatedAtMillis']),
+      deletedAtMillis: serializer.fromJson<int?>(json['deletedAtMillis']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'uid': serializer.toJson<String>(uid),
+      'dateKey': serializer.toJson<int>(dateKey),
+      'siteId': serializer.toJson<int?>(siteId),
+      'kind': serializer.toJson<String>(kind),
+      'label': serializer.toJson<String>(label),
+      'amountWon': serializer.toJson<int>(amountWon),
+      'isTaxable': serializer.toJson<bool>(isTaxable),
+      'createdAtMillis': serializer.toJson<int>(createdAtMillis),
+      'updatedAtMillis': serializer.toJson<int>(updatedAtMillis),
+      'deletedAtMillis': serializer.toJson<int?>(deletedAtMillis),
+    };
+  }
+
+  DayExtraItem copyWith({
+    int? id,
+    String? uid,
+    int? dateKey,
+    Value<int?> siteId = const Value.absent(),
+    String? kind,
+    String? label,
+    int? amountWon,
+    bool? isTaxable,
+    int? createdAtMillis,
+    int? updatedAtMillis,
+    Value<int?> deletedAtMillis = const Value.absent(),
+  }) => DayExtraItem(
+    id: id ?? this.id,
+    uid: uid ?? this.uid,
+    dateKey: dateKey ?? this.dateKey,
+    siteId: siteId.present ? siteId.value : this.siteId,
+    kind: kind ?? this.kind,
+    label: label ?? this.label,
+    amountWon: amountWon ?? this.amountWon,
+    isTaxable: isTaxable ?? this.isTaxable,
+    createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+    updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+    deletedAtMillis: deletedAtMillis.present
+        ? deletedAtMillis.value
+        : this.deletedAtMillis,
+  );
+  DayExtraItem copyWithCompanion(DayExtraItemsCompanion data) {
+    return DayExtraItem(
+      id: data.id.present ? data.id.value : this.id,
+      uid: data.uid.present ? data.uid.value : this.uid,
+      dateKey: data.dateKey.present ? data.dateKey.value : this.dateKey,
+      siteId: data.siteId.present ? data.siteId.value : this.siteId,
+      kind: data.kind.present ? data.kind.value : this.kind,
+      label: data.label.present ? data.label.value : this.label,
+      amountWon: data.amountWon.present ? data.amountWon.value : this.amountWon,
+      isTaxable: data.isTaxable.present ? data.isTaxable.value : this.isTaxable,
+      createdAtMillis: data.createdAtMillis.present
+          ? data.createdAtMillis.value
+          : this.createdAtMillis,
+      updatedAtMillis: data.updatedAtMillis.present
+          ? data.updatedAtMillis.value
+          : this.updatedAtMillis,
+      deletedAtMillis: data.deletedAtMillis.present
+          ? data.deletedAtMillis.value
+          : this.deletedAtMillis,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DayExtraItem(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('siteId: $siteId, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('amountWon: $amountWon, ')
+          ..write('isTaxable: $isTaxable, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('deletedAtMillis: $deletedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    uid,
+    dateKey,
+    siteId,
+    kind,
+    label,
+    amountWon,
+    isTaxable,
+    createdAtMillis,
+    updatedAtMillis,
+    deletedAtMillis,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DayExtraItem &&
+          other.id == this.id &&
+          other.uid == this.uid &&
+          other.dateKey == this.dateKey &&
+          other.siteId == this.siteId &&
+          other.kind == this.kind &&
+          other.label == this.label &&
+          other.amountWon == this.amountWon &&
+          other.isTaxable == this.isTaxable &&
+          other.createdAtMillis == this.createdAtMillis &&
+          other.updatedAtMillis == this.updatedAtMillis &&
+          other.deletedAtMillis == this.deletedAtMillis);
+}
+
+class DayExtraItemsCompanion extends UpdateCompanion<DayExtraItem> {
+  final Value<int> id;
+  final Value<String> uid;
+  final Value<int> dateKey;
+  final Value<int?> siteId;
+  final Value<String> kind;
+  final Value<String> label;
+  final Value<int> amountWon;
+  final Value<bool> isTaxable;
+  final Value<int> createdAtMillis;
+  final Value<int> updatedAtMillis;
+  final Value<int?> deletedAtMillis;
+  const DayExtraItemsCompanion({
+    this.id = const Value.absent(),
+    this.uid = const Value.absent(),
+    this.dateKey = const Value.absent(),
+    this.siteId = const Value.absent(),
+    this.kind = const Value.absent(),
+    this.label = const Value.absent(),
+    this.amountWon = const Value.absent(),
+    this.isTaxable = const Value.absent(),
+    this.createdAtMillis = const Value.absent(),
+    this.updatedAtMillis = const Value.absent(),
+    this.deletedAtMillis = const Value.absent(),
+  });
+  DayExtraItemsCompanion.insert({
+    this.id = const Value.absent(),
+    required String uid,
+    required int dateKey,
+    this.siteId = const Value.absent(),
+    required String kind,
+    required String label,
+    required int amountWon,
+    this.isTaxable = const Value.absent(),
+    required int createdAtMillis,
+    required int updatedAtMillis,
+    this.deletedAtMillis = const Value.absent(),
+  }) : uid = Value(uid),
+       dateKey = Value(dateKey),
+       kind = Value(kind),
+       label = Value(label),
+       amountWon = Value(amountWon),
+       createdAtMillis = Value(createdAtMillis),
+       updatedAtMillis = Value(updatedAtMillis);
+  static Insertable<DayExtraItem> custom({
+    Expression<int>? id,
+    Expression<String>? uid,
+    Expression<int>? dateKey,
+    Expression<int>? siteId,
+    Expression<String>? kind,
+    Expression<String>? label,
+    Expression<int>? amountWon,
+    Expression<bool>? isTaxable,
+    Expression<int>? createdAtMillis,
+    Expression<int>? updatedAtMillis,
+    Expression<int>? deletedAtMillis,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (uid != null) 'uid': uid,
+      if (dateKey != null) 'date_key': dateKey,
+      if (siteId != null) 'site_id': siteId,
+      if (kind != null) 'kind': kind,
+      if (label != null) 'label': label,
+      if (amountWon != null) 'amount_won': amountWon,
+      if (isTaxable != null) 'is_taxable': isTaxable,
+      if (createdAtMillis != null) 'created_at_millis': createdAtMillis,
+      if (updatedAtMillis != null) 'updated_at_millis': updatedAtMillis,
+      if (deletedAtMillis != null) 'deleted_at_millis': deletedAtMillis,
+    });
+  }
+
+  DayExtraItemsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? uid,
+    Value<int>? dateKey,
+    Value<int?>? siteId,
+    Value<String>? kind,
+    Value<String>? label,
+    Value<int>? amountWon,
+    Value<bool>? isTaxable,
+    Value<int>? createdAtMillis,
+    Value<int>? updatedAtMillis,
+    Value<int?>? deletedAtMillis,
+  }) {
+    return DayExtraItemsCompanion(
+      id: id ?? this.id,
+      uid: uid ?? this.uid,
+      dateKey: dateKey ?? this.dateKey,
+      siteId: siteId ?? this.siteId,
+      kind: kind ?? this.kind,
+      label: label ?? this.label,
+      amountWon: amountWon ?? this.amountWon,
+      isTaxable: isTaxable ?? this.isTaxable,
+      createdAtMillis: createdAtMillis ?? this.createdAtMillis,
+      updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+      deletedAtMillis: deletedAtMillis ?? this.deletedAtMillis,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (uid.present) {
+      map['uid'] = Variable<String>(uid.value);
+    }
+    if (dateKey.present) {
+      map['date_key'] = Variable<int>(dateKey.value);
+    }
+    if (siteId.present) {
+      map['site_id'] = Variable<int>(siteId.value);
+    }
+    if (kind.present) {
+      map['kind'] = Variable<String>(kind.value);
+    }
+    if (label.present) {
+      map['label'] = Variable<String>(label.value);
+    }
+    if (amountWon.present) {
+      map['amount_won'] = Variable<int>(amountWon.value);
+    }
+    if (isTaxable.present) {
+      map['is_taxable'] = Variable<bool>(isTaxable.value);
+    }
+    if (createdAtMillis.present) {
+      map['created_at_millis'] = Variable<int>(createdAtMillis.value);
+    }
+    if (updatedAtMillis.present) {
+      map['updated_at_millis'] = Variable<int>(updatedAtMillis.value);
+    }
+    if (deletedAtMillis.present) {
+      map['deleted_at_millis'] = Variable<int>(deletedAtMillis.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DayExtraItemsCompanion(')
+          ..write('id: $id, ')
+          ..write('uid: $uid, ')
+          ..write('dateKey: $dateKey, ')
+          ..write('siteId: $siteId, ')
+          ..write('kind: $kind, ')
+          ..write('label: $label, ')
+          ..write('amountWon: $amountWon, ')
+          ..write('isTaxable: $isTaxable, ')
+          ..write('createdAtMillis: $createdAtMillis, ')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('deletedAtMillis: $deletedAtMillis')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1803,13 +3536,27 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PresetsTable presets = $PresetsTable(this);
   late final $DayMemosTable dayMemos = $DayMemosTable(this);
   late final $AppSettingsTable appSettings = $AppSettingsTable(this);
+  late final $SitesTable sites = $SitesTable(this);
+  late final $SiteRateHistoriesTable siteRateHistories =
+      $SiteRateHistoriesTable(this);
+  late final $DayExtraItemsTable dayExtraItems = $DayExtraItemsTable(this);
   late final Index idxWorkEntriesDate = Index(
     'idx_work_entries_date',
     'CREATE INDEX idx_work_entries_date ON work_entries (date_key)',
   );
+  late final Index idxSiteRatesSiteFrom = Index(
+    'idx_site_rates_site_from',
+    'CREATE INDEX idx_site_rates_site_from ON site_rate_histories (site_id, effective_from_date_key)',
+  );
+  late final Index idxDayExtraItemsDate = Index(
+    'idx_day_extra_items_date',
+    'CREATE INDEX idx_day_extra_items_date ON day_extra_items (date_key)',
+  );
   late final WorkEntryDao workEntryDao = WorkEntryDao(this as AppDatabase);
   late final PresetDao presetDao = PresetDao(this as AppDatabase);
   late final MemoDao memoDao = MemoDao(this as AppDatabase);
+  late final SiteDao siteDao = SiteDao(this as AppDatabase);
+  late final DayItemDao dayItemDao = DayItemDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1819,7 +3566,12 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     presets,
     dayMemos,
     appSettings,
+    sites,
+    siteRateHistories,
+    dayExtraItems,
     idxWorkEntriesDate,
+    idxSiteRatesSiteFrom,
+    idxDayExtraItemsDate,
   ];
 }
 
@@ -2719,6 +4471,838 @@ typedef $$AppSettingsTableProcessedTableManager =
       AppSetting,
       PrefetchHooks Function()
     >;
+typedef $$SitesTableCreateCompanionBuilder = SitesCompanion Function({
+  Value<int> id,
+  required String uid,
+  required String name,
+  Value<int> colorId,
+  required int sortOrder,
+  Value<bool> isArchived,
+  required int createdAtMillis,
+  required int updatedAtMillis,
+});
+typedef $$SitesTableUpdateCompanionBuilder = SitesCompanion Function({
+  Value<int> id,
+  Value<String> uid,
+  Value<String> name,
+  Value<int> colorId,
+  Value<int> sortOrder,
+  Value<bool> isArchived,
+  Value<int> createdAtMillis,
+  Value<int> updatedAtMillis,
+});
+
+class $$SitesTableFilterComposer extends Composer<_$AppDatabase, $SitesTable> {
+  $$SitesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get colorId => $composableBuilder(
+    column: $table.colorId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SitesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SitesTable> {
+  $$SitesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get name => $composableBuilder(
+    column: $table.name,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get colorId => $composableBuilder(
+    column: $table.colorId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sortOrder => $composableBuilder(
+    column: $table.sortOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SitesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SitesTable> {
+  $$SitesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uid =>
+      $composableBuilder(column: $table.uid, builder: (column) => column);
+
+  GeneratedColumn<String> get name =>
+      $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get colorId =>
+      $composableBuilder(column: $table.colorId, builder: (column) => column);
+
+  GeneratedColumn<int> get sortOrder =>
+      $composableBuilder(column: $table.sortOrder, builder: (column) => column);
+
+  GeneratedColumn<bool> get isArchived => $composableBuilder(
+    column: $table.isArchived,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => column,
+  );
+}
+
+class $$SitesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SitesTable,
+          Site,
+          $$SitesTableFilterComposer,
+          $$SitesTableOrderingComposer,
+          $$SitesTableAnnotationComposer,
+          $$SitesTableCreateCompanionBuilder,
+          $$SitesTableUpdateCompanionBuilder,
+          (Site, BaseReferences<_$AppDatabase, $SitesTable, Site>),
+          Site,
+          PrefetchHooks Function()
+        > {
+  $$SitesTableTableManager(_$AppDatabase db, $SitesTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SitesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SitesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SitesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uid = const Value.absent(),
+                Value<String> name = const Value.absent(),
+                Value<int> colorId = const Value.absent(),
+                Value<int> sortOrder = const Value.absent(),
+                Value<bool> isArchived = const Value.absent(),
+                Value<int> createdAtMillis = const Value.absent(),
+                Value<int> updatedAtMillis = const Value.absent(),
+              }) => SitesCompanion(
+                id: id,
+                uid: uid,
+                name: name,
+                colorId: colorId,
+                sortOrder: sortOrder,
+                isArchived: isArchived,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String uid,
+                required String name,
+                Value<int> colorId = const Value.absent(),
+                required int sortOrder,
+                Value<bool> isArchived = const Value.absent(),
+                required int createdAtMillis,
+                required int updatedAtMillis,
+              }) => SitesCompanion.insert(
+                id: id,
+                uid: uid,
+                name: name,
+                colorId: colorId,
+                sortOrder: sortOrder,
+                isArchived: isArchived,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SitesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SitesTable,
+      Site,
+      $$SitesTableFilterComposer,
+      $$SitesTableOrderingComposer,
+      $$SitesTableAnnotationComposer,
+      $$SitesTableCreateCompanionBuilder,
+      $$SitesTableUpdateCompanionBuilder,
+      (Site, BaseReferences<_$AppDatabase, $SitesTable, Site>),
+      Site,
+      PrefetchHooks Function()
+    >;
+typedef $$SiteRateHistoriesTableCreateCompanionBuilder =
+    SiteRateHistoriesCompanion Function({
+      Value<int> id,
+      required String uid,
+      required int siteId,
+      required int effectiveFromDateKey,
+      required int dailyRateWon,
+      required int createdAtMillis,
+      required int updatedAtMillis,
+      Value<int?> deletedAtMillis,
+    });
+typedef $$SiteRateHistoriesTableUpdateCompanionBuilder =
+    SiteRateHistoriesCompanion Function({
+      Value<int> id,
+      Value<String> uid,
+      Value<int> siteId,
+      Value<int> effectiveFromDateKey,
+      Value<int> dailyRateWon,
+      Value<int> createdAtMillis,
+      Value<int> updatedAtMillis,
+      Value<int?> deletedAtMillis,
+    });
+
+class $$SiteRateHistoriesTableFilterComposer
+    extends Composer<_$AppDatabase, $SiteRateHistoriesTable> {
+  $$SiteRateHistoriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get effectiveFromDateKey => $composableBuilder(
+    column: $table.effectiveFromDateKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dailyRateWon => $composableBuilder(
+    column: $table.dailyRateWon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$SiteRateHistoriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $SiteRateHistoriesTable> {
+  $$SiteRateHistoriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get effectiveFromDateKey => $composableBuilder(
+    column: $table.effectiveFromDateKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dailyRateWon => $composableBuilder(
+    column: $table.dailyRateWon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SiteRateHistoriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $SiteRateHistoriesTable> {
+  $$SiteRateHistoriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uid =>
+      $composableBuilder(column: $table.uid, builder: (column) => column);
+
+  GeneratedColumn<int> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<int> get effectiveFromDateKey => $composableBuilder(
+    column: $table.effectiveFromDateKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get dailyRateWon => $composableBuilder(
+    column: $table.dailyRateWon,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => column,
+  );
+}
+
+class $$SiteRateHistoriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $SiteRateHistoriesTable,
+          SiteRateHistory,
+          $$SiteRateHistoriesTableFilterComposer,
+          $$SiteRateHistoriesTableOrderingComposer,
+          $$SiteRateHistoriesTableAnnotationComposer,
+          $$SiteRateHistoriesTableCreateCompanionBuilder,
+          $$SiteRateHistoriesTableUpdateCompanionBuilder,
+          (
+            SiteRateHistory,
+            BaseReferences<
+              _$AppDatabase,
+              $SiteRateHistoriesTable,
+              SiteRateHistory
+            >,
+          ),
+          SiteRateHistory,
+          PrefetchHooks Function()
+        > {
+  $$SiteRateHistoriesTableTableManager(
+    _$AppDatabase db,
+    $SiteRateHistoriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SiteRateHistoriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SiteRateHistoriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SiteRateHistoriesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uid = const Value.absent(),
+                Value<int> siteId = const Value.absent(),
+                Value<int> effectiveFromDateKey = const Value.absent(),
+                Value<int> dailyRateWon = const Value.absent(),
+                Value<int> createdAtMillis = const Value.absent(),
+                Value<int> updatedAtMillis = const Value.absent(),
+                Value<int?> deletedAtMillis = const Value.absent(),
+              }) => SiteRateHistoriesCompanion(
+                id: id,
+                uid: uid,
+                siteId: siteId,
+                effectiveFromDateKey: effectiveFromDateKey,
+                dailyRateWon: dailyRateWon,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+                deletedAtMillis: deletedAtMillis,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String uid,
+                required int siteId,
+                required int effectiveFromDateKey,
+                required int dailyRateWon,
+                required int createdAtMillis,
+                required int updatedAtMillis,
+                Value<int?> deletedAtMillis = const Value.absent(),
+              }) => SiteRateHistoriesCompanion.insert(
+                id: id,
+                uid: uid,
+                siteId: siteId,
+                effectiveFromDateKey: effectiveFromDateKey,
+                dailyRateWon: dailyRateWon,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+                deletedAtMillis: deletedAtMillis,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$SiteRateHistoriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $SiteRateHistoriesTable,
+      SiteRateHistory,
+      $$SiteRateHistoriesTableFilterComposer,
+      $$SiteRateHistoriesTableOrderingComposer,
+      $$SiteRateHistoriesTableAnnotationComposer,
+      $$SiteRateHistoriesTableCreateCompanionBuilder,
+      $$SiteRateHistoriesTableUpdateCompanionBuilder,
+      (
+        SiteRateHistory,
+        BaseReferences<_$AppDatabase, $SiteRateHistoriesTable, SiteRateHistory>,
+      ),
+      SiteRateHistory,
+      PrefetchHooks Function()
+    >;
+typedef $$DayExtraItemsTableCreateCompanionBuilder =
+    DayExtraItemsCompanion Function({
+      Value<int> id,
+      required String uid,
+      required int dateKey,
+      Value<int?> siteId,
+      required String kind,
+      required String label,
+      required int amountWon,
+      Value<bool> isTaxable,
+      required int createdAtMillis,
+      required int updatedAtMillis,
+      Value<int?> deletedAtMillis,
+    });
+typedef $$DayExtraItemsTableUpdateCompanionBuilder =
+    DayExtraItemsCompanion Function({
+      Value<int> id,
+      Value<String> uid,
+      Value<int> dateKey,
+      Value<int?> siteId,
+      Value<String> kind,
+      Value<String> label,
+      Value<int> amountWon,
+      Value<bool> isTaxable,
+      Value<int> createdAtMillis,
+      Value<int> updatedAtMillis,
+      Value<int?> deletedAtMillis,
+    });
+
+class $$DayExtraItemsTableFilterComposer
+    extends Composer<_$AppDatabase, $DayExtraItemsTable> {
+  $$DayExtraItemsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get amountWon => $composableBuilder(
+    column: $table.amountWon,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isTaxable => $composableBuilder(
+    column: $table.isTaxable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DayExtraItemsTableOrderingComposer
+    extends Composer<_$AppDatabase, $DayExtraItemsTable> {
+  $$DayExtraItemsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get uid => $composableBuilder(
+    column: $table.uid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dateKey => $composableBuilder(
+    column: $table.dateKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get siteId => $composableBuilder(
+    column: $table.siteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get kind => $composableBuilder(
+    column: $table.kind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get label => $composableBuilder(
+    column: $table.label,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get amountWon => $composableBuilder(
+    column: $table.amountWon,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get isTaxable => $composableBuilder(
+    column: $table.isTaxable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DayExtraItemsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DayExtraItemsTable> {
+  $$DayExtraItemsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get uid =>
+      $composableBuilder(column: $table.uid, builder: (column) => column);
+
+  GeneratedColumn<int> get dateKey =>
+      $composableBuilder(column: $table.dateKey, builder: (column) => column);
+
+  GeneratedColumn<int> get siteId =>
+      $composableBuilder(column: $table.siteId, builder: (column) => column);
+
+  GeneratedColumn<String> get kind =>
+      $composableBuilder(column: $table.kind, builder: (column) => column);
+
+  GeneratedColumn<String> get label =>
+      $composableBuilder(column: $table.label, builder: (column) => column);
+
+  GeneratedColumn<int> get amountWon =>
+      $composableBuilder(column: $table.amountWon, builder: (column) => column);
+
+  GeneratedColumn<bool> get isTaxable =>
+      $composableBuilder(column: $table.isTaxable, builder: (column) => column);
+
+  GeneratedColumn<int> get createdAtMillis => $composableBuilder(
+    column: $table.createdAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get updatedAtMillis => $composableBuilder(
+    column: $table.updatedAtMillis,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get deletedAtMillis => $composableBuilder(
+    column: $table.deletedAtMillis,
+    builder: (column) => column,
+  );
+}
+
+class $$DayExtraItemsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DayExtraItemsTable,
+          DayExtraItem,
+          $$DayExtraItemsTableFilterComposer,
+          $$DayExtraItemsTableOrderingComposer,
+          $$DayExtraItemsTableAnnotationComposer,
+          $$DayExtraItemsTableCreateCompanionBuilder,
+          $$DayExtraItemsTableUpdateCompanionBuilder,
+          (
+            DayExtraItem,
+            BaseReferences<_$AppDatabase, $DayExtraItemsTable, DayExtraItem>,
+          ),
+          DayExtraItem,
+          PrefetchHooks Function()
+        > {
+  $$DayExtraItemsTableTableManager(_$AppDatabase db, $DayExtraItemsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DayExtraItemsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DayExtraItemsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DayExtraItemsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<String> uid = const Value.absent(),
+                Value<int> dateKey = const Value.absent(),
+                Value<int?> siteId = const Value.absent(),
+                Value<String> kind = const Value.absent(),
+                Value<String> label = const Value.absent(),
+                Value<int> amountWon = const Value.absent(),
+                Value<bool> isTaxable = const Value.absent(),
+                Value<int> createdAtMillis = const Value.absent(),
+                Value<int> updatedAtMillis = const Value.absent(),
+                Value<int?> deletedAtMillis = const Value.absent(),
+              }) => DayExtraItemsCompanion(
+                id: id,
+                uid: uid,
+                dateKey: dateKey,
+                siteId: siteId,
+                kind: kind,
+                label: label,
+                amountWon: amountWon,
+                isTaxable: isTaxable,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+                deletedAtMillis: deletedAtMillis,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required String uid,
+                required int dateKey,
+                Value<int?> siteId = const Value.absent(),
+                required String kind,
+                required String label,
+                required int amountWon,
+                Value<bool> isTaxable = const Value.absent(),
+                required int createdAtMillis,
+                required int updatedAtMillis,
+                Value<int?> deletedAtMillis = const Value.absent(),
+              }) => DayExtraItemsCompanion.insert(
+                id: id,
+                uid: uid,
+                dateKey: dateKey,
+                siteId: siteId,
+                kind: kind,
+                label: label,
+                amountWon: amountWon,
+                isTaxable: isTaxable,
+                createdAtMillis: createdAtMillis,
+                updatedAtMillis: updatedAtMillis,
+                deletedAtMillis: deletedAtMillis,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DayExtraItemsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DayExtraItemsTable,
+      DayExtraItem,
+      $$DayExtraItemsTableFilterComposer,
+      $$DayExtraItemsTableOrderingComposer,
+      $$DayExtraItemsTableAnnotationComposer,
+      $$DayExtraItemsTableCreateCompanionBuilder,
+      $$DayExtraItemsTableUpdateCompanionBuilder,
+      (
+        DayExtraItem,
+        BaseReferences<_$AppDatabase, $DayExtraItemsTable, DayExtraItem>,
+      ),
+      DayExtraItem,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2731,4 +5315,10 @@ class $AppDatabaseManager {
       $$DayMemosTableTableManager(_db, _db.dayMemos);
   $$AppSettingsTableTableManager get appSettings =>
       $$AppSettingsTableTableManager(_db, _db.appSettings);
+  $$SitesTableTableManager get sites =>
+      $$SitesTableTableManager(_db, _db.sites);
+  $$SiteRateHistoriesTableTableManager get siteRateHistories =>
+      $$SiteRateHistoriesTableTableManager(_db, _db.siteRateHistories);
+  $$DayExtraItemsTableTableManager get dayExtraItems =>
+      $$DayExtraItemsTableTableManager(_db, _db.dayExtraItems);
 }

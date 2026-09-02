@@ -35,8 +35,7 @@ int ymAddMonths(int ym, int months) {
 }
 
 /// 해당 월의 일수.
-int daysInMonth(int ym) =>
-    DateTime(yearOfYm(ym), monthOfYm(ym) + 1, 0).day;
+int daysInMonth(int ym) => DateTime(yearOfYm(ym), monthOfYm(ym) + 1, 0).day;
 
 /// 고정 6주(42칸) 월 격자의 dateKey 목록을 만든다.
 ///

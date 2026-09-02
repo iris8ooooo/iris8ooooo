@@ -42,8 +42,11 @@ void main() {
     test('모든 0.05 단위 값이 0~10공수 구간에서 왕복 보존된다', () {
       for (var centi = 0; centi <= 1000; centi += 5) {
         final formatted = formatGongsu(centi);
-        expect(tryParseGongsu(formatted), centi,
-            reason: '$centi centi → "$formatted" → 파싱 왕복 실패');
+        expect(
+          tryParseGongsu(formatted),
+          centi,
+          reason: '$centi centi → "$formatted" → 파싱 왕복 실패',
+        );
       }
     });
   });
@@ -90,15 +93,19 @@ void main() {
       // double이면 0.1+0.2 류 오차가 나는 조합을 정수로 정확히 계산
       expect(calcAmountWon(centiGongsu: 10, dailyRateWon: 3), 0); // 0.3 절사
       expect(
-          calcAmountWon(centiGongsu: 285, dailyRateWon: 199999), 569997); // 2.85공수
+        calcAmountWon(centiGongsu: 285, dailyRateWon: 199999),
+        569997,
+      ); // 2.85공수
     });
 
     test('한 달 근무 합산 시나리오 (공수 합산 후 곱셈)', () {
       // 22일 × 1.0 + 4일 × 1.5 + 1일 × 0.5 = 28.5공수 × 165,000원
       const centiSum = 22 * 100 + 4 * 150 + 1 * 50;
       expect(centiSum, 2850);
-      expect(calcAmountWon(centiGongsu: centiSum, dailyRateWon: 165000),
-          4702500);
+      expect(
+        calcAmountWon(centiGongsu: centiSum, dailyRateWon: 165000),
+        4702500,
+      );
     });
   });
 

@@ -16,18 +16,26 @@ class WorkEntryRepository {
   int get _now => DateTime.now().millisecondsSinceEpoch;
 
   /// 프리셋 버튼 입력. 이름/색 스냅샷 복사 — 이후 프리셋이 바뀌어도 기록 불변.
-  Future<int> addFromPreset({required int dateKey, required Preset preset}) =>
-      _add(
-        dateKey: dateKey,
-        centiGongsu: preset.centiGongsu,
-        presetId: preset.id,
-        labelSnapshot: preset.name,
-        colorIdSnapshot: preset.colorId,
-      );
+  /// [siteId]는 시트에서 선택한 업체 (없으면 미지정).
+  Future<int> addFromPreset({
+    required int dateKey,
+    required Preset preset,
+    int? siteId,
+  }) => _add(
+    dateKey: dateKey,
+    centiGongsu: preset.centiGongsu,
+    presetId: preset.id,
+    labelSnapshot: preset.name,
+    colorIdSnapshot: preset.colorId,
+    siteId: siteId,
+  );
 
   /// 직접 입력.
-  Future<int> addCustom({required int dateKey, required int centiGongsu}) =>
-      _add(dateKey: dateKey, centiGongsu: centiGongsu);
+  Future<int> addCustom({
+    required int dateKey,
+    required int centiGongsu,
+    int? siteId,
+  }) => _add(dateKey: dateKey, centiGongsu: centiGongsu, siteId: siteId);
 
   Future<int> _add({
     required int dateKey,
@@ -35,19 +43,54 @@ class WorkEntryRepository {
     int? presetId,
     String labelSnapshot = '',
     int colorIdSnapshot = 0,
+    int? siteId,
   }) {
     _validateCenti(centiGongsu);
     final now = _now;
-    return _dao.insertEntry(WorkEntriesCompanion.insert(
-      uid: generateUid(),
-      dateKey: dateKey,
-      centiGongsu: centiGongsu,
-      presetId: Value(presetId),
-      labelSnapshot: Value(labelSnapshot),
-      colorIdSnapshot: Value(colorIdSnapshot),
-      createdAtMillis: now,
-      updatedAtMillis: now,
-    ));
+    return _dao.insertEntry(
+      WorkEntriesCompanion.insert(
+        uid: generateUid(),
+        dateKey: dateKey,
+        centiGongsu: centiGongsu,
+        presetId: Value(presetId),
+        labelSnapshot: Value(labelSnapshot),
+        colorIdSnapshot: Value(colorIdSnapshot),
+        siteId: Value(siteId),
+        createdAtMillis: now,
+        updatedAtMillis: now,
+      ),
+    );
+  }
+
+  /// 기록의 업체 변경 (NULL = 업체 해제).
+  Future<void> updateSite({required int id, required int? siteId}) =>
+      _dao.updateFields(
+        id,
+        WorkEntriesCompanion(
+          siteId: Value(siteId),
+          updatedAtMillis: Value(_now),
+        ),
+      );
+
+  /// 이 기록만의 단가 오버라이드 (NULL = 업체 단가 이력을 따름).
+  Future<void> updateRateOverride({
+    required int id,
+    required int? unitRateWonOverride,
+  }) {
+    if (unitRateWonOverride != null && unitRateWonOverride < 0) {
+      throw ArgumentError.value(
+        unitRateWonOverride,
+        'unitRateWonOverride',
+        '단가는 0 이상',
+      );
+    }
+    return _dao.updateFields(
+      id,
+      WorkEntriesCompanion(
+        unitRateWonOverride: Value(unitRateWonOverride),
+        updatedAtMillis: Value(_now),
+      ),
+    );
   }
 
   /// 값 수정. 프리셋 기록의 값을 손으로 바꾸면 그 기록은 '직접 입력'이 된다

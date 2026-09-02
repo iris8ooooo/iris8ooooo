@@ -78,6 +78,68 @@ class DayMemos extends Table {
   Set<Column> get primaryKey => {dateKey};
 }
 
+/// 업체(현장). 삭제 대신 보관 — 기록의 siteId 참조가 계속 유효하다.
+/// (schemaVersion 2에서 추가. taxMode는 M3에서 ADD COLUMN 예정)
+class Sites extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uid => text().withLength(min: 36, max: 36).unique()();
+  TextColumn get name => text().withLength(min: 1, max: 30)();
+
+  /// MarkerPalette id.
+  IntColumn get colorId => integer().withDefault(const Constant(0))();
+  IntColumn get sortOrder => integer()();
+  BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
+  IntColumn get createdAtMillis => integer()();
+  IntColumn get updatedAtMillis => integer()();
+}
+
+/// 단가 이력 — 적용 시작일 기준 개정. 단가는 기록에 저장하지 않고 조회 시점에
+/// "그 날짜 이하의 가장 늦은 effectiveFrom 행"으로 해석한다. 그래서 단가를
+/// 올려도 과거 기록은 당시 단가로 계산이 유지된다(커뮤니티 핵심 요구).
+@TableIndex(
+  name: 'idx_site_rates_site_from',
+  columns: {#siteId, #effectiveFromDateKey},
+)
+class SiteRateHistories extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uid => text().withLength(min: 36, max: 36).unique()();
+  IntColumn get siteId => integer()();
+
+  /// yyyyMMdd. 이 날짜부터(포함) 적용.
+  IntColumn get effectiveFromDateKey => integer()();
+
+  /// 1.0공수당 원.
+  IntColumn get dailyRateWon => integer()();
+  IntColumn get createdAtMillis => integer()();
+  IntColumn get updatedAtMillis => integer()();
+
+  /// soft delete. 잘못 넣은 이력을 지울 때도 물리 삭제하지 않는다.
+  IntColumn get deletedAtMillis => integer().nullable()();
+}
+
+/// 일 단위 부가 항목 — 일비/식비/숙식비(가산), 공제(차감).
+/// amountWon은 항상 0 이상이고 방향은 kind로 정한다 (부호 실수 방지).
+@TableIndex(name: 'idx_day_extra_items_date', columns: {#dateKey})
+class DayExtraItems extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get uid => text().withLength(min: 36, max: 36).unique()();
+  IntColumn get dateKey => integer()();
+
+  /// 업체 귀속. NULL = 업체 무관.
+  IntColumn get siteId => integer().nullable()();
+
+  /// 'allowance'(가산) | 'deduction'(차감). enum ordinal이 아닌 안정된 문자열.
+  TextColumn get kind => text()();
+  TextColumn get label => text().withLength(min: 1, max: 20)();
+  IntColumn get amountWon => integer()();
+
+  /// M3 예약: 세금 계산에 포함할지. 기본 false(일비/식비는 통상 비과세).
+  BoolColumn get isTaxable => boolean().withDefault(const Constant(false))();
+  IntColumn get createdAtMillis => integer()();
+  IntColumn get updatedAtMillis => integer()();
+  IntColumn get deletedAtMillis => integer().nullable()();
+}
+
 /// key-value 설정. 값은 JSON 문자열 — 스키마 변경 없이 설정을 확장한다.
 class AppSettings extends Table {
   TextColumn get key => text()();

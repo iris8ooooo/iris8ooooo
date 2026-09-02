@@ -23,15 +23,17 @@ class PresetRepository {
         ? 0
         : existing.map((p) => p.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
     final now = _now;
-    return _dao.insertPreset(PresetsCompanion.insert(
-      uid: generateUid(),
-      name: name.trim(),
-      centiGongsu: centiGongsu,
-      colorId: Value(colorId),
-      sortOrder: nextOrder,
-      createdAtMillis: now,
-      updatedAtMillis: now,
-    ));
+    return _dao.insertPreset(
+      PresetsCompanion.insert(
+        uid: generateUid(),
+        name: name.trim(),
+        centiGongsu: centiGongsu,
+        colorId: Value(colorId),
+        sortOrder: nextOrder,
+        createdAtMillis: now,
+        updatedAtMillis: now,
+      ),
+    );
   }
 
   /// 이름/값/색 수정. updatedAtMillis 갱신이 "사용자가 손댄 프리셋" 표식이
@@ -57,8 +59,7 @@ class PresetRepository {
   /// 삭제 대신 보관. 과거 기록 표시는 스냅샷 덕분에 그대로 유지된다.
   Future<void> archive(int id) => _dao.archive(id, _now);
 
-  Future<void> reorder(List<int> orderedIds) =>
-      _dao.reorder(orderedIds, _now);
+  Future<void> reorder(List<int> orderedIds) => _dao.reorder(orderedIds, _now);
 
   void _validate(String name, int centi, int colorId) {
     if (name.trim().isEmpty || name.trim().length > 20) {

@@ -21,8 +21,7 @@ void main() {
     final repo = WorkEntryRepository(source.workEntryDao);
     await repo.addCustom(dateKey: 20260801, centiGongsu: 180);
     await repo.addCustom(dateKey: 20260802, centiGongsu: 100);
-    final deletedId =
-        await repo.addCustom(dateKey: 20260803, centiGongsu: 50);
+    final deletedId = await repo.addCustom(dateKey: 20260803, centiGongsu: 50);
     await repo.softDelete(deletedId);
     await MemoRepository(source.memoDao)
         .setMemo(dateKey: 20260801, body: '거푸집 해체');
@@ -66,8 +65,10 @@ void main() {
 
     expect(second.inserted, 0);
     expect(second.updated, 0);
-    expect((await target.select(target.workEntries).get()).length,
-        (await source.select(source.workEntries).get()).length);
+    expect(
+      (await target.select(target.workEntries).get()).length,
+      (await source.select(source.workEntries).get()).length,
+    );
   });
 
   test('병합은 updatedAt 최신 승리, 기존 행을 지우지 않는다', () async {
@@ -92,10 +93,14 @@ void main() {
     await WorkEntryRepository(target.workEntryDao)
         .addCustom(dateKey: 20260810, centiGongsu: 100);
 
-    expect(() => importBackupJson(target, 'not json'),
-        throwsA(isA<BackupFormatError>()));
-    expect(() => importBackupJson(target, '{"format":"other"}'),
-        throwsA(isA<BackupFormatError>()));
+    expect(
+      () => importBackupJson(target, 'not json'),
+      throwsA(isA<BackupFormatError>()),
+    );
+    expect(
+      () => importBackupJson(target, '{"format":"other"}'),
+      throwsA(isA<BackupFormatError>()),
+    );
 
     final entries = await target.select(target.workEntries).get();
     expect(entries.length, 1);
@@ -107,8 +112,10 @@ void main() {
         jsonDecode(await exportBackupJson(source)) as Map<String, Object?>;
     envelope['schemaVersion'] = AppDatabase.codeSchemaVersion + 1;
 
-    expect(() => importBackupJson(source, jsonEncode(envelope)),
-        throwsA(isA<BackupTooNew>()));
+    expect(
+      () => importBackupJson(source, jsonEncode(envelope)),
+      throwsA(isA<BackupTooNew>()),
+    );
   });
 
   test('삭제가 병합으로 전파된다 (softDelete가 updatedAt을 올리므로)', () async {
@@ -140,8 +147,9 @@ void main() {
     addTearDown(target.close);
     await importBackupJson(target, json);
 
-    final merged = (await target.presetDao.getActive())
-        .firstWhere((p) => p.uid == seed.uid);
+    final merged = (await target.presetDao.getActive()).firstWhere(
+      (p) => p.uid == seed.uid,
+    );
     expect(merged.name, '1.8공수');
     expect(merged.centiGongsu, 180); // 수정값이 유실되지 않는다
   });
@@ -159,10 +167,13 @@ void main() {
         .create(name: '내프리셋', centiGongsu: 120, colorId: 5);
     await importBackupJson(target, json);
 
-    final entry =
-        (await target.workEntryDao.getRange(20260805, 20260805)).single;
-    final linked = (await target.select(target.presets).get())
-        .firstWhere((p) => p.id == entry.presetId);
+    final entry = (await target.workEntryDao.getRange(
+      20260805,
+      20260805,
+    )).single;
+    final linked = (await target.select(target.presets).get()).firstWhere(
+      (p) => p.id == entry.presetId,
+    );
     expect(linked.uid, preset.uid); // id가 아니라 정체(uid)가 보존된다
   });
 
@@ -204,10 +215,12 @@ void main() {
     addTearDown(target.close);
     await importBackupJson(target, json);
 
-    final sourceOrder =
-        (await source.presetDao.getActive()).map((p) => p.uid).toList();
-    final targetOrder =
-        (await target.presetDao.getActive()).map((p) => p.uid).toList();
+    final sourceOrder = (await source.presetDao.getActive())
+        .map((p) => p.uid)
+        .toList();
+    final targetOrder = (await target.presetDao.getActive())
+        .map((p) => p.uid)
+        .toList();
     expect(targetOrder, sourceOrder);
   });
 
@@ -215,7 +228,8 @@ void main() {
     await seedSource();
     final envelope =
         jsonDecode(await exportBackupJson(source)) as Map<String, Object?>;
-    final entries = (envelope['workEntries'] as List).cast<Map<String, Object?>>();
+    final entries = (envelope['workEntries'] as List)
+        .cast<Map<String, Object?>>();
     entries.add({
       'uid': '11111111-1111-4111-8111-111111111111',
       'dateKey': 20260815,

@@ -31,22 +31,25 @@ void main() {
   }
 
   test('domain/data 계층에 double 타입이 없다', () {
-    expectNoMatch('lib/domain', RegExp(r'\bdouble\b'),
-        '공수/금액 계산은 정수 연산만 허용');
-    expectNoMatch('lib/data', RegExp(r'\bdouble\b'),
-        '저장 경로에 double이 존재하면 안 됨');
+    expectNoMatch('lib/domain', RegExp(r'\bdouble\b'), '공수/금액 계산은 정수 연산만 허용');
+    expectNoMatch('lib/data', RegExp(r'\bdouble\b'), '저장 경로에 double이 존재하면 안 됨');
   });
 
   test('lib 전체에 DateTime.utc / isSameDay가 없다', () {
+    expectNoMatch('lib', RegExp(r'DateTime\.utc'), '날짜는 로컬 기준 dateKey만 사용');
     expectNoMatch(
-        'lib', RegExp(r'DateTime\.utc'), '날짜는 로컬 기준 dateKey만 사용');
-    expectNoMatch('lib', RegExp(r'\bisSameDay\s*\('),
-        '날짜 비교는 dateKey int 동등 비교만 사용');
+      'lib',
+      RegExp(r'\bisSameDay\s*\('),
+      '날짜 비교는 dateKey int 동등 비교만 사용',
+    );
   });
 
   test('파괴적 DB 조작 코드가 없다 (destructive fallback 부재 증명)', () {
-    expectNoMatch('lib', RegExp(r'DROP\s+TABLE', caseSensitive: false),
-        '테이블 드롭 금지');
+    expectNoMatch(
+      'lib',
+      RegExp(r'DROP\s+TABLE', caseSensitive: false),
+      '테이블 드롭 금지',
+    );
     expectNoMatch('lib', RegExp(r'\.deleteTable\s*\('), '테이블 삭제 금지');
     expectNoMatch('lib', RegExp(r'deleteDatabase'), 'DB 삭제 금지');
   });
@@ -63,7 +66,10 @@ void main() {
         }
       }
     }
-    expect(offenders, isEmpty,
-        reason: '기록/프리셋은 soft delete만 허용 — 위반: $offenders');
+    expect(
+      offenders,
+      isEmpty,
+      reason: '기록/프리셋은 soft delete만 허용 — 위반: $offenders',
+    );
   });
 }

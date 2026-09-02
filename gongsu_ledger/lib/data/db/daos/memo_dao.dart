@@ -16,14 +16,15 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
           .map((memo) => memo == null || memo.body.isEmpty ? null : memo);
 
   /// 한 달 중 메모가 있는 날짜 키 집합 — 달력 셀 표시용. tombstone 제외.
-  Stream<Set<int>> watchMonthMemoKeys(int ym) => (selectOnly(dayMemos)
-        ..addColumns([dayMemos.dateKey])
-        ..where(dayMemos.dateKey
-                .isBetweenValues(ym * 100 + 1, ym * 100 + 31) &
-            dayMemos.body.equals('').not()))
-      .watch()
-      .map((rows) =>
-          rows.map((r) => r.read(dayMemos.dateKey)!).toSet());
+  Stream<Set<int>> watchMonthMemoKeys(int ym) =>
+      (selectOnly(dayMemos)
+            ..addColumns([dayMemos.dateKey])
+            ..where(
+              dayMemos.dateKey.isBetweenValues(ym * 100 + 1, ym * 100 + 31) &
+                  dayMemos.body.equals('').not(),
+            ))
+          .watch()
+          .map((rows) => rows.map((r) => r.read(dayMemos.dateKey)!).toSet());
 
   /// 본문이 비면 tombstone(빈 본문 + updatedAt 갱신)으로 바꾸고,
   /// 있으면 upsert. 물리 삭제하지 않는 이유: 백업 병합(LWW)이 삭제를
@@ -31,12 +32,20 @@ class MemoDao extends DatabaseAccessor<AppDatabase> with _$MemoDaoMixin {
   Future<void> setMemo(int dateKey, String body, int nowMillis) async {
     final trimmed = body.trim();
     if (trimmed.isEmpty) {
-      await (update(dayMemos)..where((t) => t.dateKey.equals(dateKey)))
-          .write(DayMemosCompanion(
-              body: const Value(''), updatedAtMillis: Value(nowMillis)));
+      await (update(dayMemos)..where((t) => t.dateKey.equals(dateKey))).write(
+        DayMemosCompanion(
+          body: const Value(''),
+          updatedAtMillis: Value(nowMillis),
+        ),
+      );
       return;
     }
-    await into(dayMemos).insertOnConflictUpdate(DayMemosCompanion.insert(
-        dateKey: Value(dateKey), body: trimmed, updatedAtMillis: nowMillis));
+    await into(dayMemos).insertOnConflictUpdate(
+      DayMemosCompanion.insert(
+        dateKey: Value(dateKey),
+        body: trimmed,
+        updatedAtMillis: nowMillis,
+      ),
+    );
   }
 }

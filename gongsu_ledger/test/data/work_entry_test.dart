@@ -19,8 +19,10 @@ void main() {
   test('최초 생성 시 건설형 프리셋이 시드된다 (고정 uid)', () async {
     final presets = await db.presetDao.getActive();
     expect(presets.length, constructionSeedPresets.length);
-    expect(presets.map((p) => p.uid).toSet(),
-        constructionSeedPresets.map((s) => s.uid).toSet());
+    expect(
+      presets.map((p) => p.uid).toSet(),
+      constructionSeedPresets.map((s) => s.uid).toSet(),
+    );
     expect(presets.first.name, '1공수');
     expect(presets.first.centiGongsu, 100);
   });
@@ -108,8 +110,7 @@ void main() {
 
   test('값 수정 시 직접 입력으로 전환 (라벨 해제, 색 유지)', () async {
     final preset = (await db.presetDao.getActive()).first;
-    final id =
-        await repo.addFromPreset(dateKey: 20260805, preset: preset);
+    final id = await repo.addFromPreset(dateKey: 20260805, preset: preset);
     await repo.updateValue(id: id, centiGongsu: 180);
 
     final entry = (await db.workEntryDao.getById(id))!;
@@ -120,8 +121,10 @@ void main() {
   });
 
   test('음수 공수는 거부된다', () async {
-    expect(() => repo.addCustom(dateKey: 20260805, centiGongsu: -5),
-        throwsArgumentError);
+    expect(
+      () => repo.addCustom(dateKey: 20260805, centiGongsu: -5),
+      throwsArgumentError,
+    );
   });
 }
 
@@ -133,9 +136,9 @@ class PresetRepositoryForTest {
   Future<void> renameAndArchive(int id) async {
     final now = DateTime.now().millisecondsSinceEpoch;
     await db.presetDao.updateFields(
-        id,
-        PresetsCompanion(
-            name: const Value('바뀐이름'), updatedAtMillis: Value(now)));
+      id,
+      PresetsCompanion(name: const Value('바뀐이름'), updatedAtMillis: Value(now)),
+    );
     await db.presetDao.archive(id, now);
   }
 }

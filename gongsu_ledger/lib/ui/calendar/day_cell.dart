@@ -16,6 +16,7 @@ class DayCell extends StatelessWidget {
     required this.entries,
     required this.hasMemo,
     required this.onTap,
+    this.siteById = const {},
   });
 
   final int dateKey;
@@ -24,6 +25,15 @@ class DayCell extends StatelessWidget {
   final List<WorkEntry> entries;
   final bool hasMemo;
   final VoidCallback onTap;
+
+  /// id → 업체 (보관 포함). 업체가 붙은 기록은 프리셋 색 대신 업체 색으로
+  /// 표시한다 ("달력에 업체 색상 표시" 명세).
+  final Map<int, Site> siteById;
+
+  int _markerColorId(WorkEntry e) {
+    final site = e.siteId == null ? null : siteById[e.siteId];
+    return site?.colorId ?? e.colorIdSnapshot;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -67,8 +77,7 @@ class DayCell extends StatelessWidget {
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 13,
-                      fontWeight:
-                          isToday ? FontWeight.w800 : FontWeight.w500,
+                      fontWeight: isToday ? FontWeight.w800 : FontWeight.w500,
                       color: dayColor,
                     ),
                   ),
@@ -104,8 +113,10 @@ class DayCell extends StatelessWidget {
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: MarkerPalette.colorOf(e.colorIdSnapshot,
-                              brightness: Theme.of(context).brightness),
+                          color: MarkerPalette.colorOf(
+                            _markerColorId(e),
+                            brightness: Theme.of(context).brightness,
+                          ),
                         ),
                       ),
                     ),

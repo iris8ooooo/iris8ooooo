@@ -43,8 +43,11 @@ void main() {
       for (var ym = 202501; ym <= 202812; ym = nextYm(ym)) {
         final grid = monthGridDateKeys(ym);
         expect(grid.contains(ym * 100 + 1), true, reason: '$ym 1일 누락');
-        expect(grid.contains(ym * 100 + daysInMonth(ym)), true,
-            reason: '$ym 말일 누락');
+        expect(
+          grid.contains(ym * 100 + daysInMonth(ym)),
+          true,
+          reason: '$ym 말일 누락',
+        );
       }
     });
 
@@ -52,8 +55,11 @@ void main() {
       for (final ym in [202601, 202602, 202612, 202802]) {
         final grid = monthGridDateKeys(ym);
         for (var day = 1; day <= daysInMonth(ym); day++) {
-          expect(grid.where((k) => k == ym * 100 + day).length, 1,
-              reason: '$ym-$day');
+          expect(
+            grid.where((k) => k == ym * 100 + day).length,
+            1,
+            reason: '$ym-$day',
+          );
         }
       }
     });
@@ -61,28 +67,38 @@ void main() {
     test('42칸이 연속된 날짜다 (빈 칸/건너뜀 없음)', () {
       final grid = monthGridDateKeys(202612); // 12월 → 1월 연 경계 포함
       for (var i = 1; i < grid.length; i++) {
-        final prev = DateTime(grid[i - 1] ~/ 10000,
-            (grid[i - 1] % 10000) ~/ 100, grid[i - 1] % 100);
+        final prev = DateTime(
+          grid[i - 1] ~/ 10000,
+          (grid[i - 1] % 10000) ~/ 100,
+          grid[i - 1] % 100,
+        );
         final curr = DateTime(
-            grid[i] ~/ 10000, (grid[i] % 10000) ~/ 100, grid[i] % 100);
-        expect(curr.difference(prev).inDays, 1,
-            reason: '${grid[i - 1]} 다음이 ${grid[i]}');
+          grid[i] ~/ 10000,
+          (grid[i] % 10000) ~/ 100,
+          grid[i] % 100,
+        );
+        expect(
+          curr.difference(prev).inDays,
+          1,
+          reason: '${grid[i - 1]} 다음이 ${grid[i]}',
+        );
       }
     });
 
     test('첫 칸은 항상 주 시작 요일이다', () {
       for (var ym = 202501; ym <= 202712; ym = nextYm(ym)) {
         final first = monthGridDateKeys(ym).first;
-        final weekday =
-            DateTime(first ~/ 10000, (first % 10000) ~/ 100, first % 100)
-                .weekday;
+        final weekday = DateTime(
+          first ~/ 10000,
+          (first % 10000) ~/ 100,
+          first % 100,
+        ).weekday;
         expect(weekday, DateTime.sunday, reason: '$ym');
       }
     });
 
     test('월요일 시작 설정도 지원한다', () {
-      final grid =
-          monthGridDateKeys(202608, weekStartWeekday: DateTime.monday);
+      final grid = monthGridDateKeys(202608, weekStartWeekday: DateTime.monday);
       expect(grid.first, 20260727); // 8/1(토)이 포함된 주의 월요일 = 7/27
       final weekday = DateTime(2026, 7, 27).weekday;
       expect(weekday, DateTime.monday);
@@ -94,8 +110,15 @@ void main() {
       expect(weekdayOrder(), [7, 1, 2, 3, 4, 5, 6]); // 일 월 화 수 목 금 토
     });
     test('월요일 시작', () {
-      expect(weekdayOrder(weekStartWeekday: DateTime.monday),
-          [1, 2, 3, 4, 5, 6, 7]);
+      expect(weekdayOrder(weekStartWeekday: DateTime.monday), [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+      ]);
     });
   });
 }

@@ -17,10 +17,12 @@ void main() {
   Widget buildApp() {
     db = AppDatabase(NativeDatabase.memory());
     return ProviderScope(
-      overrides: [databaseProvider.overrideWith((ref) {
-        ref.onDispose(db.close);
-        return db;
-      })],
+      overrides: [
+        databaseProvider.overrideWith((ref) {
+          ref.onDispose(db.close);
+          return db;
+        }),
+      ],
       child: const GongsuApp(),
     );
   }
@@ -41,8 +43,7 @@ void main() {
     return dateKeyOf(DateTime(today.year, today.month, day));
   }
 
-  testWidgets('앱 실행 → 달력과 월 합계가 바로 보인다 (로그인/온보딩 없음)',
-      (tester) async {
+  testWidgets('앱 실행 → 달력과 월 합계가 바로 보인다 (로그인/온보딩 없음)', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -50,13 +51,11 @@ void main() {
     expect(find.text('${today.year}년 ${today.month}월'), findsOneWidget);
     expect(find.text('${today.month}월 총 공수'), findsOneWidget);
     expect(find.text('0 공수'), findsOneWidget);
-    expect(
-        find.byKey(ValueKey('day-${dateKeyOf(today)}')), findsOneWidget);
+    expect(find.byKey(ValueKey('day-${dateKeyOf(today)}')), findsOneWidget);
     await unmountApp(tester);
   });
 
-  testWidgets('빈 날: 날짜 탭 → 프리셋 탭, 2탭으로 입력 완료 + 시트 자동 닫힘',
-      (tester) async {
+  testWidgets('빈 날: 날짜 탭 → 프리셋 탭, 2탭으로 입력 완료 + 시트 자동 닫힘', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -70,8 +69,10 @@ void main() {
 
     // 시트가 닫혔고(프리셋 버튼 사라짐) 저장은 정확히 그 날짜로 되었다.
     expect(find.text('1공수'), findsNothing);
-    final rows = await db.workEntryDao
-        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
+    final rows = await db.workEntryDao.getRange(
+      (dateKey ~/ 100) * 100 + 1,
+      (dateKey ~/ 100) * 100 + 31,
+    );
     expect(rows.single.dateKey, dateKey);
     expect(rows.single.centiGongsu, 100);
     expect(find.text('1 공수'), findsOneWidget); // 월 합계 갱신
@@ -96,14 +97,15 @@ void main() {
 
     expect(find.text('합계'), findsOneWidget); // 시트가 아직 열려 있다
     expect(find.text('2.5 공수'), findsWidgets); // 시트 내 합계
-    final rows = await db.workEntryDao
-        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
+    final rows = await db.workEntryDao.getRange(
+      (dateKey ~/ 100) * 100 + 1,
+      (dateKey ~/ 100) * 100 + 31,
+    );
     expect(rows.length, 2);
     await unmountApp(tester);
   });
 
-  testWidgets('직접 입력: 자체 키패드로 1.8 → 반올림 없이 그대로 저장',
-      (tester) async {
+  testWidgets('직접 입력: 자체 키패드로 1.8 → 반올림 없이 그대로 저장', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
 
@@ -120,8 +122,10 @@ void main() {
     await tester.tap(find.text('저장'));
     await tester.pumpAndSettle();
 
-    final rows = await db.workEntryDao
-        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
+    final rows = await db.workEntryDao.getRange(
+      (dateKey ~/ 100) * 100 + 1,
+      (dateKey ~/ 100) * 100 + 31,
+    );
     expect(rows.single.centiGongsu, 180); // 1.8은 1.8이다
     expect(find.text('1.8 공수'), findsOneWidget); // 월 합계 카드
     await unmountApp(tester);
@@ -143,12 +147,15 @@ void main() {
     }
     expect(find.text('0.05 단위로 입력해 주세요'), findsOneWidget);
 
-    final saveButton =
-        tester.widget<FilledButton>(find.widgetWithText(FilledButton, '저장'));
+    final saveButton = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, '저장'),
+    );
     expect(saveButton.onPressed, null); // 비활성
 
-    final rows = await db.workEntryDao
-        .getRange((dateKey ~/ 100) * 100 + 1, (dateKey ~/ 100) * 100 + 31);
+    final rows = await db.workEntryDao.getRange(
+      (dateKey ~/ 100) * 100 + 1,
+      (dateKey ~/ 100) * 100 + 31,
+    );
     expect(rows, isEmpty);
     await unmountApp(tester);
   });
@@ -184,8 +191,10 @@ void main() {
 
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    expect(find.byKey(ValueKey('day-${dateKeyOf(DateTime.now())}')),
-        findsOneWidget);
+    expect(
+      find.byKey(ValueKey('day-${dateKeyOf(DateTime.now())}')),
+      findsOneWidget,
+    );
 
     await tester.tap(find.byKey(ValueKey('day-${pickEmptyDayKey()}')));
     await tester.pumpAndSettle();

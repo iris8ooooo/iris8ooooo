@@ -29,8 +29,20 @@ class MonthSummary {
   /// 세후 실수령(원). M3 세금 도입 전에는 null.
   final int? netWon;
 
-  static const empty =
-      MonthSummary(totalCenti: 0, workedDays: 0, entryCount: 0);
+  static const empty = MonthSummary(
+    totalCenti: 0,
+    workedDays: 0,
+    entryCount: 0,
+  );
+
+  MonthSummary withMoney({required int? grossWon, required int? netWon}) =>
+      MonthSummary(
+        totalCenti: totalCenti,
+        workedDays: workedDays,
+        entryCount: entryCount,
+        grossWon: grossWon,
+        netWon: netWon,
+      );
 }
 
 /// dateKey → 그 날의 centi-공수 목록에서 월 합계를 만든다.

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:drift/drift.dart';
 
 import '../db/app_database.dart';
+import '../repositories/day_item_repository.dart';
 
 /// 간이 백업 코덱 (M1 안전망 — M4 정식 백업의 축소판, 같은 봉투 규약).
 ///
@@ -12,9 +13,13 @@ import '../db/app_database.dart';
 /// - 가져오기는 **병합 전용**: uid(메모는 dateKey) 기준 upsert,
 ///   updatedAtMillis 최신 승리. 기존 행을 지우는 경로가 없다 —
 ///   잘못된 파일을 붙여넣어도 데이터가 사라질 수 없다.
+/// - 행 간 참조(기록→프리셋/업체, 이력→업체, 항목→업체)는 로컬 id가 아니라
+///   uid로 내보내고 가져올 때 재매핑한다 — 기기 간 id 어긋남 방지.
 /// - forward-tolerant: 모르는 키는 무시, 빠진 컬럼은 기본값.
 ///   백업 schemaVersion이 앱 지원 범위보다 높으면 조용히 깎지 않고
 ///   [BackupTooNew]를 던진다 (UI: "앱을 업데이트한 뒤 복원해 주세요").
+/// - 값 불변식(음수 공수·금액, 비정상 날짜, 빈 이름)을 위반한 행은 건너뛰고
+///   skipped 로 보고한다 — 이 경로만 repository 검증을 우회하기 때문.
 const String backupFormatTag = 'gongsu_ledger_backup';
 
 class BackupTooNew implements Exception {
@@ -30,8 +35,11 @@ class BackupFormatError implements Exception {
 }
 
 class ImportResult {
-  const ImportResult(
-      {required this.inserted, required this.updated, required this.skipped});
+  const ImportResult({
+    required this.inserted,
+    required this.updated,
+    required this.skipped,
+  });
   final int inserted;
   final int updated;
 
@@ -59,9 +67,12 @@ Future<String> exportBackupJson(AppDatabase db) async {
   final entries = await db.select(db.workEntries).get();
   final presets = await db.select(db.presets).get();
   final memos = await db.select(db.dayMemos).get();
-  // 기록→프리셋 연결은 로컬 autoincrement id가 아니라 uid로 내보낸다 —
-  // 다른 기기에 병합될 때 id가 어긋나 엉뚱한 프리셋을 가리키는 것을 막는다.
+  final sites = await db.select(db.sites).get();
+  final rates = await db.select(db.siteRateHistories).get();
+  final items = await db.select(db.dayExtraItems).get();
   final presetUidById = {for (final p in presets) p.id: p.uid};
+  final siteUidById = {for (final s in sites) s.id: s.uid};
+
   return jsonEncode({
     'format': backupFormatTag,
     'schemaVersion': AppDatabase.codeSchemaVersion,
@@ -75,12 +86,12 @@ Future<String> exportBackupJson(AppDatabase db) async {
           'presetUid': e.presetId == null ? null : presetUidById[e.presetId],
           'labelSnapshot': e.labelSnapshot,
           'colorIdSnapshot': e.colorIdSnapshot,
-          'siteId': e.siteId,
+          'siteUid': e.siteId == null ? null : siteUidById[e.siteId],
           'unitRateWonOverride': e.unitRateWonOverride,
           'createdAtMillis': e.createdAtMillis,
           'updatedAtMillis': e.updatedAtMillis,
           'deletedAtMillis': e.deletedAtMillis,
-        }
+        },
     ],
     'presets': [
       for (final p in presets)
@@ -93,7 +104,7 @@ Future<String> exportBackupJson(AppDatabase db) async {
           'isArchived': p.isArchived,
           'createdAtMillis': p.createdAtMillis,
           'updatedAtMillis': p.updatedAtMillis,
-        }
+        },
     ],
     'dayMemos': [
       for (final m in memos)
@@ -101,7 +112,46 @@ Future<String> exportBackupJson(AppDatabase db) async {
           'dateKey': m.dateKey,
           'body': m.body,
           'updatedAtMillis': m.updatedAtMillis,
-        }
+        },
+    ],
+    'sites': [
+      for (final s in sites)
+        {
+          'uid': s.uid,
+          'name': s.name,
+          'colorId': s.colorId,
+          'sortOrder': s.sortOrder,
+          'isArchived': s.isArchived,
+          'createdAtMillis': s.createdAtMillis,
+          'updatedAtMillis': s.updatedAtMillis,
+        },
+    ],
+    'siteRateHistories': [
+      for (final r in rates)
+        {
+          'uid': r.uid,
+          'siteUid': siteUidById[r.siteId],
+          'effectiveFromDateKey': r.effectiveFromDateKey,
+          'dailyRateWon': r.dailyRateWon,
+          'createdAtMillis': r.createdAtMillis,
+          'updatedAtMillis': r.updatedAtMillis,
+          'deletedAtMillis': r.deletedAtMillis,
+        },
+    ],
+    'dayExtraItems': [
+      for (final it in items)
+        {
+          'uid': it.uid,
+          'dateKey': it.dateKey,
+          'siteUid': it.siteId == null ? null : siteUidById[it.siteId],
+          'kind': it.kind,
+          'label': it.label,
+          'amountWon': it.amountWon,
+          'isTaxable': it.isTaxable,
+          'createdAtMillis': it.createdAtMillis,
+          'updatedAtMillis': it.updatedAtMillis,
+          'deletedAtMillis': it.deletedAtMillis,
+        },
     ],
   });
 }
@@ -129,10 +179,48 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
   var skipped = 0;
 
   await db.transaction(() async {
-    // 프리셋을 먼저 병합해야 기록의 presetUid를 로컬 id로 되살릴 수 있다.
+    // ── 업체 (기록/이력/항목이 참조하므로 가장 먼저) ──────────────
+    for (final row in _rows(decoded['sites'])) {
+      final uid = _uid(row);
+      if (uid == null) {
+        skipped++;
+        continue;
+      }
+      final name = row['name'] as String? ?? '';
+      if (name.isEmpty) {
+        skipped++;
+        continue;
+      }
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(
+        db.sites,
+      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+      final companion = SitesCompanion(
+        uid: Value(uid),
+        name: Value(name),
+        colorId: Value(_asInt(row['colorId']) ?? 0),
+        sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
+        isArchived: Value(row['isArchived'] as bool? ?? false),
+        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+        updatedAtMillis: Value(incomingUpdatedAt),
+      );
+      if (existing == null) {
+        await db.into(db.sites).insert(companion);
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(
+          db.sites,
+        )..where((t) => t.uid.equals(uid))).write(companion);
+        updated++;
+      }
+    }
+    final siteRows = await db.select(db.sites).get();
+    final siteIdByUid = {for (final s in siteRows) s.uid: s.id};
+
+    // ── 프리셋 ───────────────────────────────────────────────
     for (final row in _rows(decoded['presets'])) {
-      final uid = row['uid'];
-      if (uid is! String || uid.length != 36) {
+      final uid = _uid(row);
+      if (uid == null) {
         skipped++;
         continue;
       }
@@ -143,9 +231,9 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
         continue;
       }
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(db.presets)
-            ..where((t) => t.uid.equals(uid)))
-          .getSingleOrNull();
+      final existing = await (db.select(
+        db.presets,
+      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
       final companion = PresetsCompanion(
         uid: Value(uid),
         name: Value(presetName),
@@ -160,48 +248,48 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
         await db.into(db.presets).insert(companion);
         inserted++;
       } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(db.presets)..where((t) => t.uid.equals(uid)))
-            .write(companion);
+        await (db.update(
+          db.presets,
+        )..where((t) => t.uid.equals(uid))).write(companion);
         updated++;
       }
     }
-
     final presetRows = await db.select(db.presets).get();
     final presetIdByUid = {for (final p in presetRows) p.uid: p.id};
 
+    // ── 기록 ─────────────────────────────────────────────────
     for (final row in _rows(decoded['workEntries'])) {
-      final uid = row['uid'];
-      if (uid is! String || uid.length != 36) {
+      final uid = _uid(row);
+      if (uid == null) {
         skipped++;
         continue;
       }
-      // 앱 내 다른 쓰기는 전부 repository 검증을 거치는데 이 경로만
-      // 우회하므로, 손상·편집된 백업의 오염 행(음수 공수, 엉뚱한 날짜)이
-      // 월 합계를 조용히 망가뜨리지 않게 여기서 값 불변식을 지킨다.
       final dateKey = _asInt(row['dateKey']);
       final centiGongsu = _asInt(row['centiGongsu']);
+      final override = _asInt(row['unitRateWonOverride']);
       if (dateKey == null ||
           !_isPlausibleDateKey(dateKey) ||
           centiGongsu == null ||
-          centiGongsu < 0) {
+          centiGongsu < 0 ||
+          (override != null && override < 0)) {
         skipped++;
         continue;
       }
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(db.workEntries)
-            ..where((t) => t.uid.equals(uid)))
-          .getSingleOrNull();
+      final existing = await (db.select(
+        db.workEntries,
+      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
       final presetUid = row['presetUid'];
+      final siteUid = row['siteUid'];
       final companion = WorkEntriesCompanion(
         uid: Value(uid),
         dateKey: Value(dateKey),
         centiGongsu: Value(centiGongsu),
-        presetId:
-            Value(presetUid is String ? presetIdByUid[presetUid] : null),
+        presetId: Value(presetUid is String ? presetIdByUid[presetUid] : null),
         labelSnapshot: Value(row['labelSnapshot'] as String? ?? ''),
         colorIdSnapshot: Value(_asInt(row['colorIdSnapshot']) ?? 0),
-        siteId: Value(_asInt(row['siteId'])),
-        unitRateWonOverride: Value(_asInt(row['unitRateWonOverride'])),
+        siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
+        unitRateWonOverride: Value(override),
         createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
         updatedAtMillis: Value(incomingUpdatedAt),
         deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
@@ -210,13 +298,100 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
         await db.into(db.workEntries).insert(companion);
         inserted++;
       } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(db.workEntries)
-              ..where((t) => t.uid.equals(uid)))
-            .write(companion);
+        await (db.update(
+          db.workEntries,
+        )..where((t) => t.uid.equals(uid))).write(companion);
         updated++;
       }
     }
 
+    // ── 단가 이력 (업체 uid가 반드시 풀려야 한다) ─────────────────
+    for (final row in _rows(decoded['siteRateHistories'])) {
+      final uid = _uid(row);
+      final siteUid = row['siteUid'];
+      final siteId = siteUid is String ? siteIdByUid[siteUid] : null;
+      final effectiveFrom = _asInt(row['effectiveFromDateKey']);
+      final rate = _asInt(row['dailyRateWon']);
+      if (uid == null ||
+          siteId == null ||
+          effectiveFrom == null ||
+          !_isPlausibleDateKey(effectiveFrom) ||
+          rate == null ||
+          rate < 0) {
+        skipped++;
+        continue;
+      }
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(
+        db.siteRateHistories,
+      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+      final companion = SiteRateHistoriesCompanion(
+        uid: Value(uid),
+        siteId: Value(siteId),
+        effectiveFromDateKey: Value(effectiveFrom),
+        dailyRateWon: Value(rate),
+        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+        updatedAtMillis: Value(incomingUpdatedAt),
+        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+      );
+      if (existing == null) {
+        await db.into(db.siteRateHistories).insert(companion);
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(
+          db.siteRateHistories,
+        )..where((t) => t.uid.equals(uid))).write(companion);
+        updated++;
+      }
+    }
+
+    // ── 부가 항목 ─────────────────────────────────────────────
+    for (final row in _rows(decoded['dayExtraItems'])) {
+      final uid = _uid(row);
+      final dateKey = _asInt(row['dateKey']);
+      final amount = _asInt(row['amountWon']);
+      final label = row['label'] as String? ?? '';
+      final kind = row['kind'] as String? ?? '';
+      final validKind = ExtraItemKind.values.any((k) => k.code == kind);
+      if (uid == null ||
+          dateKey == null ||
+          !_isPlausibleDateKey(dateKey) ||
+          amount == null ||
+          amount < 0 ||
+          label.isEmpty ||
+          !validKind) {
+        skipped++;
+        continue;
+      }
+      final siteUid = row['siteUid'];
+      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+      final existing = await (db.select(
+        db.dayExtraItems,
+      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+      final companion = DayExtraItemsCompanion(
+        uid: Value(uid),
+        dateKey: Value(dateKey),
+        siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
+        kind: Value(kind),
+        label: Value(label),
+        amountWon: Value(amount),
+        isTaxable: Value(row['isTaxable'] as bool? ?? false),
+        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+        updatedAtMillis: Value(incomingUpdatedAt),
+        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+      );
+      if (existing == null) {
+        await db.into(db.dayExtraItems).insert(companion);
+        inserted++;
+      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+        await (db.update(
+          db.dayExtraItems,
+        )..where((t) => t.uid.equals(uid))).write(companion);
+        updated++;
+      }
+    }
+
+    // ── 메모 ─────────────────────────────────────────────────
     for (final row in _rows(decoded['dayMemos'])) {
       final dateKey = _asInt(row['dateKey']);
       if (dateKey == null || !_isPlausibleDateKey(dateKey)) {
@@ -225,24 +400,32 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
       }
       final body = row['body'] as String? ?? '';
       final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(db.dayMemos)
-            ..where((t) => t.dateKey.equals(dateKey)))
-          .getSingleOrNull();
+      final existing = await (db.select(
+        db.dayMemos,
+      )..where((t) => t.dateKey.equals(dateKey))).getSingleOrNull();
       if (existing == null) {
         // 없는 날짜의 tombstone(빈 본문)까지 만들 필요는 없다.
         if (body.isEmpty) continue;
-        await db.into(db.dayMemos).insert(DayMemosCompanion.insert(
-            dateKey: Value(dateKey),
-            body: body,
-            updatedAtMillis: incomingUpdatedAt));
+        await db
+            .into(db.dayMemos)
+            .insert(
+              DayMemosCompanion.insert(
+                dateKey: Value(dateKey),
+                body: body,
+                updatedAtMillis: incomingUpdatedAt,
+              ),
+            );
         inserted++;
       } else if (incomingUpdatedAt > existing.updatedAtMillis) {
         // 빈 본문(tombstone)도 그대로 반영 — 삭제가 기기 간 전파된다.
-        await (db.update(db.dayMemos)
-              ..where((t) => t.dateKey.equals(dateKey)))
-            .write(DayMemosCompanion(
-                body: Value(body),
-                updatedAtMillis: Value(incomingUpdatedAt)));
+        await (db.update(
+          db.dayMemos,
+        )..where((t) => t.dateKey.equals(dateKey))).write(
+          DayMemosCompanion(
+            body: Value(body),
+            updatedAtMillis: Value(incomingUpdatedAt),
+          ),
+        );
         updated++;
       }
     }
@@ -259,3 +442,8 @@ Iterable<Map<String, Object?>> _rows(Object? value) sync* {
 }
 
 int? _asInt(Object? v) => v is int ? v : null;
+
+String? _uid(Map<String, Object?> row) {
+  final uid = row['uid'];
+  return uid is String && uid.length == 36 ? uid : null;
+}

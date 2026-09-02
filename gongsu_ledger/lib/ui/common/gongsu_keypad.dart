@@ -36,8 +36,9 @@ class _GongsuKeypadState extends State<GongsuKeypad> {
   @override
   void initState() {
     super.initState();
-    _buffer =
-        widget.initialCenti == null ? '' : formatGongsu(widget.initialCenti!);
+    _buffer = widget.initialCenti == null
+        ? ''
+        : formatGongsu(widget.initialCenti!);
   }
 
   int? get _parsed => tryParseGongsu(_buffer);
@@ -160,7 +161,9 @@ class _GongsuKeypadState extends State<GongsuKeypad> {
                           child: Text(
                             key,
                             style: const TextStyle(
-                                fontSize: 22, fontWeight: FontWeight.w600),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
                       ),
