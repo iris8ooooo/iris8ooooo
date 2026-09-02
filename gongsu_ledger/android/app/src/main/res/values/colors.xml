@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 홈 위젯 색 (라이트). 앱 테마 seed #1565C0 계열, 고대비. -->
+    <color name="widget_bg">#FFFBFCFF</color>
+    <color name="widget_text_primary">#FF1A1C1E</color>
+    <color name="widget_text_secondary">#FF5A6070</color>
+    <color name="widget_accent">#FF0F4C9A</color>
+	<color name="ic_launcher_background">#1565C0</color>
+</resources>

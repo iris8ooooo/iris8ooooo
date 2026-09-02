@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">공수장부</string>
+    <string name="widget_label">이번 달 공수</string>
+    <string name="widget_description">이번 달 총 공수와 예상 실수령액을 보여줘요.</string>
+</resources>

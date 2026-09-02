@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 홈 위젯 레이아웃 (2x2). 값은 GongsuWidgetProvider 가 채운다. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/gongsu_widget_bg"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp">
+
+    <TextView
+        android:id="@+id/widget_month"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:textColor="@color/widget_text_secondary"
+        android:text="이번 달 공수" />
+
+    <TextView
+        android:id="@+id/widget_gongsu"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textSize="34sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_primary"
+        android:text="0" />
+
+    <TextView
+        android:id="@+id/widget_days"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="13sp"
+        android:textColor="@color/widget_text_secondary"
+        android:text="근무 0일" />
+
+    <View
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+    <TextView
+        android:id="@+id/widget_money_label"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="@color/widget_text_secondary"
+        android:text="실수령" />
+
+    <TextView
+        android:id="@+id/widget_money"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="17sp"
+        android:textStyle="bold"
+        android:maxLines="1"
+        android:textColor="@color/widget_accent"
+        android:text="0원" />
+</LinearLayout>
