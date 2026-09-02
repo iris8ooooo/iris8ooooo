@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../domain/marker_palette.dart';
+import '../../domain/tax_engine.dart';
 import '../../domain/uid.dart';
 import '../db/app_database.dart';
 import '../db/daos/site_dao.dart';
@@ -21,6 +22,8 @@ class SiteRepository {
     required String name,
     required int colorId,
     int? dailyRateWon,
+    TaxMode taxMode = TaxMode.none,
+    TaxOptions taxOptions = TaxOptions.defaults,
   }) async {
     _validateSite(name, colorId);
     final existing = await _dao.getActive();
@@ -36,6 +39,8 @@ class SiteRepository {
         sortOrder: nextOrder,
         createdAtMillis: now,
         updatedAtMillis: now,
+        taxMode: Value(taxMode.code),
+        taxOptionsJson: Value(taxOptions.toJsonString()),
       ),
     );
     if (dailyRateWon != null) {
@@ -63,6 +68,21 @@ class SiteRepository {
       ),
     );
   }
+
+  /// 세금 방식/옵션 변경. 과거 기록의 실수령도 이 설정으로 다시 계산된다
+  /// (세금은 저장하지 않고 조회 시점에 계산하므로).
+  Future<void> updateTax({
+    required int id,
+    required TaxMode mode,
+    required TaxOptions options,
+  }) => _dao.updateSiteFields(
+    id,
+    SitesCompanion(
+      taxMode: Value(mode.code),
+      taxOptionsJson: Value(options.toJsonString()),
+      updatedAtMillis: Value(_now),
+    ),
+  );
 
   /// 삭제 대신 보관 — 과거 기록의 업체명/색 표시는 유지된다.
   Future<void> archive(int id) => _dao.archive(id, _now);

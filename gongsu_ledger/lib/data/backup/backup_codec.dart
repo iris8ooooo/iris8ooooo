@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 
+import '../../domain/tax_engine.dart';
 import '../db/app_database.dart';
 import '../repositories/day_item_repository.dart';
 
@@ -124,6 +125,8 @@ Future<String> exportBackupJson(AppDatabase db) async {
           'isArchived': s.isArchived,
           'createdAtMillis': s.createdAtMillis,
           'updatedAtMillis': s.updatedAtMillis,
+          'taxMode': s.taxMode,
+          'taxOptionsJson': s.taxOptionsJson,
         },
     ],
     'siteRateHistories': [
@@ -203,6 +206,9 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
         isArchived: Value(row['isArchived'] as bool? ?? false),
         createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
         updatedAtMillis: Value(incomingUpdatedAt),
+        // v2 백업에는 없는 키 — 기본 'none'. 모르는 코드도 'none'으로.
+        taxMode: Value(TaxMode.fromCode(row['taxMode'] as String?).code),
+        taxOptionsJson: Value(row['taxOptionsJson'] as String?),
       );
       if (existing == null) {
         await db.into(db.sites).insert(companion);

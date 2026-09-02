@@ -25,6 +25,15 @@ class DayItemDao extends DatabaseAccessor<AppDatabase> with _$DayItemDaoMixin {
             ]))
           .watch();
 
+  Stream<List<DayExtraItem>> watchRange(int fromKey, int toKey) =>
+      (_alive()
+            ..where((t) => t.dateKey.isBetweenValues(fromKey, toKey))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.dateKey),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
+          .watch();
+
   Future<List<DayExtraItem>> getRange(int fromKey, int toKey) =>
       (_alive()
             ..where((t) => t.dateKey.isBetweenValues(fromKey, toKey))

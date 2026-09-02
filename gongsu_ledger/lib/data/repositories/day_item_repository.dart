@@ -34,6 +34,7 @@ class DayItemRepository {
     required String label,
     required int amountWon,
     int? siteId,
+    bool isTaxable = false,
   }) {
     _validate(label, amountWon);
     final now = _now;
@@ -45,6 +46,8 @@ class DayItemRepository {
         kind: kind.code,
         label: label.trim(),
         amountWon: amountWon,
+        // 공제 항목은 과세 여부가 무의미하므로 항상 false.
+        isTaxable: Value(kind == ExtraItemKind.allowance && isTaxable),
         createdAtMillis: now,
         updatedAtMillis: now,
       ),
@@ -56,6 +59,7 @@ class DayItemRepository {
     required ExtraItemKind kind,
     required String label,
     required int amountWon,
+    bool isTaxable = false,
   }) {
     _validate(label, amountWon);
     return _dao.updateFields(
@@ -64,6 +68,7 @@ class DayItemRepository {
         kind: Value(kind.code),
         label: Value(label.trim()),
         amountWon: Value(amountWon),
+        isTaxable: Value(kind == ExtraItemKind.allowance && isTaxable),
         updatedAtMillis: Value(_now),
       ),
     );

@@ -79,7 +79,7 @@ class DayMemos extends Table {
 }
 
 /// 업체(현장). 삭제 대신 보관 — 기록의 siteId 참조가 계속 유효하다.
-/// (schemaVersion 2에서 추가. taxMode는 M3에서 ADD COLUMN 예정)
+/// (schemaVersion 2에서 추가, v3에서 taxMode/taxOptionsJson ADD COLUMN)
 class Sites extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get uid => text().withLength(min: 36, max: 36).unique()();
@@ -91,6 +91,14 @@ class Sites extends Table {
   BoolColumn get isArchived => boolean().withDefault(const Constant(false))();
   IntColumn get createdAtMillis => integer()();
   IntColumn get updatedAtMillis => integer()();
+
+  /// M3 (schemaVersion 3, ADD COLUMN): 세금 방식 코드.
+  /// 'none' | 'withholding33' | 'insurance4'. 기본 'none' — 잘못된 공제보다
+  /// 공제 없음이 안전하다. 업체 편집 화면에서 고른다.
+  TextColumn get taxMode => text().withDefault(const Constant('none'))();
+
+  /// M3: 4대보험 세부 옵션 JSON (TaxOptions). NULL = 기본값.
+  TextColumn get taxOptionsJson => text().nullable()();
 }
 
 /// 단가 이력 — 적용 시작일 기준 개정. 단가는 기록에 저장하지 않고 조회 시점에

@@ -5,6 +5,7 @@ import '../../data/db/app_database.dart';
 import '../../data/repositories/site_repository.dart';
 import '../../domain/date_key.dart';
 import '../../domain/marker_palette.dart';
+import '../../domain/tax_engine.dart';
 import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../common/won_format.dart';
@@ -24,6 +25,8 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
   late final TextEditingController _nameController;
   late final TextEditingController _initialRateController;
   late int _colorId;
+  late TaxMode _taxMode;
+  late TaxOptions _taxOptions;
 
   @override
   void initState() {
@@ -31,6 +34,8 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
     _nameController = TextEditingController(text: widget.site?.name ?? '');
     _initialRateController = TextEditingController();
     _colorId = widget.site?.colorId ?? _suggestColor();
+    _taxMode = TaxMode.fromCode(widget.site?.taxMode);
+    _taxOptions = TaxOptions.fromJsonString(widget.site?.taxOptionsJson);
   }
 
   /// 새 업체는 기존 업체와 겹치지 않는 색을 기본 제안한다.
@@ -61,12 +66,19 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
           name: _nameController.text,
           colorId: _colorId,
           dailyRateWon: parseWon(_initialRateController.text),
+          taxMode: _taxMode,
+          taxOptions: _taxOptions,
         );
       } else {
         await repo.update(
           id: widget.site!.id,
           name: _nameController.text,
           colorId: _colorId,
+        );
+        await repo.updateTax(
+          id: widget.site!.id,
+          mode: _taxMode,
+          options: _taxOptions,
         );
       }
     } catch (e) {
@@ -298,6 +310,13 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
             ],
           ),
           const SizedBox(height: 20),
+          _TaxSection(
+            mode: _taxMode,
+            options: _taxOptions,
+            onModeChanged: (m) => setState(() => _taxMode = m),
+            onOptionsChanged: (o) => setState(() => _taxOptions = o),
+          ),
+          const SizedBox(height: 20),
           if (isNew) ...[
             TextField(
               controller: _initialRateController,
@@ -399,6 +418,88 @@ class _RateHistorySection extends ConsumerWidget {
                 onPressed: () => onDelete(rate),
               ),
             ),
+      ],
+    );
+  }
+}
+
+/// 세금 방식 선택 + 4대보험 세부 옵션.
+class _TaxSection extends StatelessWidget {
+  const _TaxSection({
+    required this.mode,
+    required this.options,
+    required this.onModeChanged,
+    required this.onOptionsChanged,
+  });
+
+  final TaxMode mode;
+  final TaxOptions options;
+  final ValueChanged<TaxMode> onModeChanged;
+  final ValueChanged<TaxOptions> onOptionsChanged;
+
+  static String _describe(TaxMode m) => switch (m) {
+    TaxMode.none => '세금·보험 공제 없이 세전 금액을 실수령으로 봅니다.',
+    TaxMode.withholding33 => '사업소득(프리랜서) 방식. 소득세 3% + 지방소득세 0.3%를 뺍니다.',
+    TaxMode.insurance4 =>
+      '근로자 부담 4대보험(국민연금·건강·장기요양·고용)을 뺍니다. '
+          '국민연금·건강보험은 이 업체에서 월 8일 이상 일한 달에만 적용됩니다(아래에서 변경).',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          '세금 방식 (실수령 계산)',
+          style: TextStyle(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 8),
+        SegmentedButton<TaxMode>(
+          key: const ValueKey('tax-mode'),
+          segments: [
+            for (final m in TaxMode.values)
+              ButtonSegment(value: m, label: Text(m.label)),
+          ],
+          selected: {mode},
+          onSelectionChanged: (s) => onModeChanged(s.first),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _describe(mode),
+          style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+        ),
+        if (mode == TaxMode.insurance4) ...[
+          const SizedBox(height: 6),
+          SwitchListTile(
+            key: const ValueKey('tax-daily-income'),
+            contentPadding: EdgeInsets.zero,
+            title: const Text('일용근로소득세 함께 계산'),
+            subtitle: const Text('일당 15만원 초과분의 2.7% (+지방소득세)'),
+            value: options.applyDailyIncomeTax,
+            onChanged: (v) =>
+                onOptionsChanged(options.copyWith(applyDailyIncomeTax: v)),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 6),
+            child: Text(
+              '국민연금·건강보험 적용 조건',
+              style: TextStyle(color: scheme.onSurfaceVariant),
+            ),
+          ),
+          SegmentedButton<int>(
+            key: const ValueKey('tax-min-days'),
+            segments: const [
+              ButtonSegment(value: 8, label: Text('월 8일 이상 근무')),
+              ButtonSegment(value: 0, label: Text('항상 적용')),
+            ],
+            selected: {options.pensionHealthMinDays == 0 ? 0 : 8},
+            onSelectionChanged: (s) => onOptionsChanged(
+              options.copyWith(pensionHealthMinDays: s.first),
+            ),
+          ),
+        ],
       ],
     );
   }

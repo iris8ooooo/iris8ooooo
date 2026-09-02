@@ -30,7 +30,8 @@ class AppDatabase extends _$AppDatabase {
   /// 버전 이력 (drift_schemas/ 에 덤프 커밋, 전 버전쌍 마이그레이션 테스트):
   /// - v1 (M1): WorkEntries, Presets, DayMemos, AppSettings
   /// - v2 (M2): + Sites, SiteRateHistories, DayExtraItems
-  static const int codeSchemaVersion = 2;
+  /// - v3 (M3): Sites + taxMode, taxOptionsJson (ADD COLUMN)
+  static const int codeSchemaVersion = 3;
 
   @override
   int get schemaVersion => codeSchemaVersion;
@@ -51,6 +52,12 @@ class AppDatabase extends _$AppDatabase {
           await m.createTable(dayExtraItems);
           await m.createIndex(idxSiteRatesSiteFrom);
           await m.createIndex(idxDayExtraItemsDate);
+        }
+        // createTable은 항상 "현재(v3) 정의"로 만들므로, v1에서 올 때는 위에서
+        // 이미 새 컬럼이 포함된다. ADD COLUMN은 v2 DB에만 적용한다.
+        if (from >= 2 && from < 3) {
+          await m.addColumn(sites, sites.taxMode);
+          await m.addColumn(sites, sites.taxOptionsJson);
         }
       });
     },

@@ -8,6 +8,7 @@ import '../../data/repositories/day_item_repository.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/date_key.dart';
 import '../../domain/gongsu_value.dart';
+import '../../domain/korean_holidays.dart';
 import '../../domain/marker_palette.dart';
 import '../../domain/rate_resolver.dart';
 import '../../state/calendar_providers.dart';
@@ -92,7 +93,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
 
   String get _title {
     final d = dateFromKey(widget.dateKey);
-    return '${d.month}월 ${d.day}일 (${_weekdayNames[d.weekday - 1]})';
+    final base = '${d.month}월 ${d.day}일 (${_weekdayNames[d.weekday - 1]})';
+    final holiday = koreanHolidayName(widget.dateKey);
+    return holiday == null ? base : '$base · $holiday';
   }
 
   /// 이 시트 라우트가 아직 최상단일 때만 pop — 이중 pop으로 달력 화면까지
@@ -320,6 +323,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             label: input.label,
             amountWon: input.amountWon,
             siteId: siteId,
+            isTaxable: input.isTaxable,
           );
     } catch (e) {
       _showError('부가항목을 저장하지 못했어요.');

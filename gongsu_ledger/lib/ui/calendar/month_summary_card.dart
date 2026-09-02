@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/gongsu_value.dart';
 import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
+import '../../state/tax_providers.dart';
 import '../common/won_format.dart';
 
 /// 달력 위 상시 표시되는 월 합계 카드.
@@ -18,6 +19,7 @@ class MonthSummaryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(monthSummaryProvider(ym));
     final money = ref.watch(monthMoneyProvider(ym));
+    final settlement = ref.watch(monthSettlementProvider(ym));
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
@@ -106,6 +108,50 @@ class MonthSummaryCard extends ConsumerWidget {
                     style: TextStyle(fontSize: 12, color: scheme.error),
                   ),
                 ),
+              if (summary.netWon != null) ...[
+                const SizedBox(height: 4),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        settlement.tax.isZero ? '실수령 (공제 없음)' : '실수령 (세후)',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: scheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      formatWon(summary.netWon!),
+                      key: const ValueKey('net-won'),
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: scheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                if (!settlement.tax.isZero)
+                  Text(
+                    '세금·보험 공제 ${formatWon(settlement.tax.totalWon)}',
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  )
+                else if (!settlement.hasTaxConfigured)
+                  Text(
+                    '업체 수정 → 세금 방식을 고르면 공제가 계산돼요',
+                    textAlign: TextAlign.end,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+              ],
             ],
           ],
         ),

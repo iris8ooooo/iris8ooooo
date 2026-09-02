@@ -30,7 +30,17 @@ class WorkEntryDao extends DatabaseAccessor<AppDatabase>
             ]))
           .watch();
 
-  /// 임의 기간(dateKey 양끝 포함)의 살아있는 기록 — M3 기간 정산 대비.
+  /// 임의 기간의 살아있는 기록 스트림 — 정산/통계 화면이 구독한다.
+  Stream<List<WorkEntry>> watchRange(int fromKey, int toKey) =>
+      (_alive()
+            ..where((t) => t.dateKey.isBetweenValues(fromKey, toKey))
+            ..orderBy([
+              (t) => OrderingTerm.asc(t.dateKey),
+              (t) => OrderingTerm.asc(t.id),
+            ]))
+          .watch();
+
+  /// 임의 기간(dateKey 양끝 포함)의 살아있는 기록.
   Future<List<WorkEntry>> getRange(int fromKey, int toKey) =>
       (_alive()
             ..where((t) => t.dateKey.isBetweenValues(fromKey, toKey))

@@ -17,7 +17,11 @@ class DayCell extends StatelessWidget {
     required this.hasMemo,
     required this.onTap,
     this.siteById = const {},
+    this.holidayName,
   });
+
+  /// 공휴일 이름 (내장 데이터). 있으면 날짜를 빨간색으로.
+  final String? holidayName;
 
   final int dateKey;
   final bool inMonth;
@@ -43,6 +47,8 @@ class DayCell extends StatelessWidget {
 
     final dayColor = !inMonth
         ? scheme.onSurface.withValues(alpha: 0.25)
+        : holidayName != null
+        ? scheme.error
         : switch (weekday) {
             DateTime.sunday => scheme.error,
             DateTime.saturday => scheme.primary,
@@ -84,22 +90,27 @@ class DayCell extends StatelessWidget {
                 ),
               ],
             ),
-            const Spacer(),
-            if (entries.isNotEmpty)
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text(
-                  totalCenti > 0 ? formatGongsu(totalCenti) : '휴',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: totalCenti > 0
-                        ? scheme.onSurface
-                        : scheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            const Spacer(),
+            // 가운데 슬롯은 남는 높이에 맞춰 줄어든다 — 큰글씨/작은 화면에서
+            // 셀이 넘치지 않도록 (RenderFlex overflow 방지).
+            Expanded(
+              child: entries.isEmpty
+                  ? const SizedBox.shrink()
+                  : Center(
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          totalCenti > 0 ? formatGongsu(totalCenti) : '휴',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: totalCenti > 0
+                                ? scheme.onSurface
+                                : scheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+            ),
             SizedBox(
               height: 8,
               child: Row(

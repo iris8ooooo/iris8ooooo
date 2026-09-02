@@ -8,6 +8,7 @@ import '../domain/month_money.dart';
 import '../domain/month_summary.dart';
 import 'db_providers.dart';
 import 'site_providers.dart';
+import 'tax_providers.dart';
 
 /// 현재 보이는 달 (yyyyMM). family 키는 전부 int — 객체 키의 ==/hashCode
 /// 실수로 인한 캐시 미스·중복 구독을 차단한다.
@@ -114,9 +115,10 @@ final monthSummaryProvider = Provider.autoDispose.family<MonthSummary, int>((
       e.key: [for (final w in e.value) w.centiGongsu],
   });
   final money = ref.watch(monthMoneyProvider(ym));
+  final settlement = ref.watch(monthSettlementProvider(ym));
   return base.withMoney(
     grossWon: money.isMeaningful ? money.grossWon : null,
-    netWon: null, // M3 세금 정산에서 채운다
+    netWon: money.isMeaningful ? settlement.netWon : null,
   );
 });
 

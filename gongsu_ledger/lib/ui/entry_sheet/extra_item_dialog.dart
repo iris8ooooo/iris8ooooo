@@ -3,11 +3,17 @@ import 'package:flutter/material.dart';
 import '../../data/repositories/day_item_repository.dart';
 import '../common/won_format.dart';
 
-typedef ExtraItemInput = ({ExtraItemKind kind, String label, int amountWon});
+typedef ExtraItemInput = ({
+  ExtraItemKind kind,
+  String label,
+  int amountWon,
+  bool isTaxable,
+});
 
 /// 부가항목 추가 다이얼로그. 가산/공제 선택 → 자주 쓰는 이름 칩 → 금액.
 Future<ExtraItemInput?> showExtraItemDialog(BuildContext context) {
   var kind = ExtraItemKind.allowance;
+  var isTaxable = false;
   final labelController = TextEditingController();
   final amountController = TextEditingController();
 
@@ -80,6 +86,15 @@ Future<ExtraItemInput?> showExtraItemDialog(BuildContext context) {
                   ),
                   onChanged: (_) => setDialogState(() {}),
                 ),
+                if (kind == ExtraItemKind.allowance)
+                  SwitchListTile(
+                    key: const ValueKey('extra-taxable'),
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('세금 계산에 포함 (과세)'),
+                    subtitle: const Text('식비·일비는 보통 비과세라 꺼 둡니다'),
+                    value: isTaxable,
+                    onChanged: (v) => setDialogState(() => isTaxable = v),
+                  ),
               ],
             ),
           ),
@@ -97,6 +112,7 @@ Future<ExtraItemInput?> showExtraItemDialog(BuildContext context) {
                       kind: kind,
                       label: labelController.text,
                       amountWon: parseWon(amountController.text)!,
+                      isTaxable: kind == ExtraItemKind.allowance && isTaxable,
                     )),
               child: const Text('추가'),
             ),

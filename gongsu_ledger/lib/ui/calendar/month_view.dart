@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/date_key.dart';
+import '../../domain/korean_holidays.dart';
 import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
 import '../../state/site_providers.dart';
@@ -56,6 +57,9 @@ class MonthView extends ConsumerWidget {
                                 : const [],
                             hasMemo: inMonth && memoKeys.contains(dateKey),
                             siteById: siteById,
+                            holidayName: inMonth
+                                ? koreanHolidayName(dateKey)
+                                : null,
                             onTap: () {
                               if (inMonth) {
                                 showEntrySheet(context, dateKey);

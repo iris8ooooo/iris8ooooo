@@ -7,7 +7,10 @@ import '../../domain/month_grid.dart';
 import '../../state/calendar_providers.dart';
 import '../backup/backup_page.dart';
 import '../presets/preset_list_page.dart';
+import '../settings/tax_rates_page.dart';
+import '../settlement/settlement_page.dart';
 import '../sites/site_list_page.dart';
+import '../stats/stats_page.dart';
 import 'month_summary_card.dart';
 import 'month_view.dart';
 
@@ -80,6 +83,18 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             tooltip: '메뉴',
             onSelected: (value) {
               switch (value) {
+                case 'settlement':
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettlementPage()),
+                  );
+                case 'stats':
+                  Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const StatsPage()));
+                case 'tax':
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const TaxRatesPage()),
+                  );
                 case 'sites':
                   Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const SiteListPage()),
@@ -95,9 +110,12 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               }
             },
             itemBuilder: (context) => const [
+              PopupMenuItem(value: 'settlement', child: Text('정산 (기간 지정)')),
+              PopupMenuItem(value: 'stats', child: Text('통계')),
               PopupMenuItem(value: 'sites', child: Text('업체(현장) 관리')),
               PopupMenuItem(value: 'presets', child: Text('프리셋 관리')),
               PopupMenuItem(value: 'backup', child: Text('백업 / 복원')),
+              PopupMenuItem(value: 'tax', child: Text('세금 · 요율 설정')),
             ],
           ),
         ],

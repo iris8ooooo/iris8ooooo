@@ -1901,6 +1901,29 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _taxModeMeta = const VerificationMeta(
+    'taxMode',
+  );
+  @override
+  late final GeneratedColumn<String> taxMode = GeneratedColumn<String>(
+    'tax_mode',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('none'),
+  );
+  static const VerificationMeta _taxOptionsJsonMeta = const VerificationMeta(
+    'taxOptionsJson',
+  );
+  @override
+  late final GeneratedColumn<String> taxOptionsJson = GeneratedColumn<String>(
+    'tax_options_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -1911,6 +1934,8 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
     isArchived,
     createdAtMillis,
     updatedAtMillis,
+    taxMode,
+    taxOptionsJson,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -1985,6 +2010,21 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
     } else if (isInserting) {
       context.missing(_updatedAtMillisMeta);
     }
+    if (data.containsKey('tax_mode')) {
+      context.handle(
+        _taxModeMeta,
+        taxMode.isAcceptableOrUnknown(data['tax_mode']!, _taxModeMeta),
+      );
+    }
+    if (data.containsKey('tax_options_json')) {
+      context.handle(
+        _taxOptionsJsonMeta,
+        taxOptionsJson.isAcceptableOrUnknown(
+          data['tax_options_json']!,
+          _taxOptionsJsonMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -2026,6 +2066,14 @@ class $SitesTable extends Sites with TableInfo<$SitesTable, Site> {
         DriftSqlType.int,
         data['${effectivePrefix}updated_at_millis'],
       )!,
+      taxMode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tax_mode'],
+      )!,
+      taxOptionsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tax_options_json'],
+      ),
     );
   }
 
@@ -2046,6 +2094,14 @@ class Site extends DataClass implements Insertable<Site> {
   final bool isArchived;
   final int createdAtMillis;
   final int updatedAtMillis;
+
+  /// M3 (schemaVersion 3, ADD COLUMN): 세금 방식 코드.
+  /// 'none' | 'withholding33' | 'insurance4'. 기본 'none' — 잘못된 공제보다
+  /// 공제 없음이 안전하다. 업체 편집 화면에서 고른다.
+  final String taxMode;
+
+  /// M3: 4대보험 세부 옵션 JSON (TaxOptions). NULL = 기본값.
+  final String? taxOptionsJson;
   const Site({
     required this.id,
     required this.uid,
@@ -2055,6 +2111,8 @@ class Site extends DataClass implements Insertable<Site> {
     required this.isArchived,
     required this.createdAtMillis,
     required this.updatedAtMillis,
+    required this.taxMode,
+    this.taxOptionsJson,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -2067,6 +2125,10 @@ class Site extends DataClass implements Insertable<Site> {
     map['is_archived'] = Variable<bool>(isArchived);
     map['created_at_millis'] = Variable<int>(createdAtMillis);
     map['updated_at_millis'] = Variable<int>(updatedAtMillis);
+    map['tax_mode'] = Variable<String>(taxMode);
+    if (!nullToAbsent || taxOptionsJson != null) {
+      map['tax_options_json'] = Variable<String>(taxOptionsJson);
+    }
     return map;
   }
 
@@ -2080,6 +2142,10 @@ class Site extends DataClass implements Insertable<Site> {
       isArchived: Value(isArchived),
       createdAtMillis: Value(createdAtMillis),
       updatedAtMillis: Value(updatedAtMillis),
+      taxMode: Value(taxMode),
+      taxOptionsJson: taxOptionsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(taxOptionsJson),
     );
   }
 
@@ -2097,6 +2163,8 @@ class Site extends DataClass implements Insertable<Site> {
       isArchived: serializer.fromJson<bool>(json['isArchived']),
       createdAtMillis: serializer.fromJson<int>(json['createdAtMillis']),
       updatedAtMillis: serializer.fromJson<int>(json['updatedAtMillis']),
+      taxMode: serializer.fromJson<String>(json['taxMode']),
+      taxOptionsJson: serializer.fromJson<String?>(json['taxOptionsJson']),
     );
   }
   @override
@@ -2111,6 +2179,8 @@ class Site extends DataClass implements Insertable<Site> {
       'isArchived': serializer.toJson<bool>(isArchived),
       'createdAtMillis': serializer.toJson<int>(createdAtMillis),
       'updatedAtMillis': serializer.toJson<int>(updatedAtMillis),
+      'taxMode': serializer.toJson<String>(taxMode),
+      'taxOptionsJson': serializer.toJson<String?>(taxOptionsJson),
     };
   }
 
@@ -2123,6 +2193,8 @@ class Site extends DataClass implements Insertable<Site> {
     bool? isArchived,
     int? createdAtMillis,
     int? updatedAtMillis,
+    String? taxMode,
+    Value<String?> taxOptionsJson = const Value.absent(),
   }) => Site(
     id: id ?? this.id,
     uid: uid ?? this.uid,
@@ -2132,6 +2204,10 @@ class Site extends DataClass implements Insertable<Site> {
     isArchived: isArchived ?? this.isArchived,
     createdAtMillis: createdAtMillis ?? this.createdAtMillis,
     updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+    taxMode: taxMode ?? this.taxMode,
+    taxOptionsJson: taxOptionsJson.present
+        ? taxOptionsJson.value
+        : this.taxOptionsJson,
   );
   Site copyWithCompanion(SitesCompanion data) {
     return Site(
@@ -2149,6 +2225,10 @@ class Site extends DataClass implements Insertable<Site> {
       updatedAtMillis: data.updatedAtMillis.present
           ? data.updatedAtMillis.value
           : this.updatedAtMillis,
+      taxMode: data.taxMode.present ? data.taxMode.value : this.taxMode,
+      taxOptionsJson: data.taxOptionsJson.present
+          ? data.taxOptionsJson.value
+          : this.taxOptionsJson,
     );
   }
 
@@ -2162,7 +2242,9 @@ class Site extends DataClass implements Insertable<Site> {
           ..write('sortOrder: $sortOrder, ')
           ..write('isArchived: $isArchived, ')
           ..write('createdAtMillis: $createdAtMillis, ')
-          ..write('updatedAtMillis: $updatedAtMillis')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('taxMode: $taxMode, ')
+          ..write('taxOptionsJson: $taxOptionsJson')
           ..write(')'))
         .toString();
   }
@@ -2177,6 +2259,8 @@ class Site extends DataClass implements Insertable<Site> {
     isArchived,
     createdAtMillis,
     updatedAtMillis,
+    taxMode,
+    taxOptionsJson,
   );
   @override
   bool operator ==(Object other) =>
@@ -2189,7 +2273,9 @@ class Site extends DataClass implements Insertable<Site> {
           other.sortOrder == this.sortOrder &&
           other.isArchived == this.isArchived &&
           other.createdAtMillis == this.createdAtMillis &&
-          other.updatedAtMillis == this.updatedAtMillis);
+          other.updatedAtMillis == this.updatedAtMillis &&
+          other.taxMode == this.taxMode &&
+          other.taxOptionsJson == this.taxOptionsJson);
 }
 
 class SitesCompanion extends UpdateCompanion<Site> {
@@ -2201,6 +2287,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
   final Value<bool> isArchived;
   final Value<int> createdAtMillis;
   final Value<int> updatedAtMillis;
+  final Value<String> taxMode;
+  final Value<String?> taxOptionsJson;
   const SitesCompanion({
     this.id = const Value.absent(),
     this.uid = const Value.absent(),
@@ -2210,6 +2298,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
     this.isArchived = const Value.absent(),
     this.createdAtMillis = const Value.absent(),
     this.updatedAtMillis = const Value.absent(),
+    this.taxMode = const Value.absent(),
+    this.taxOptionsJson = const Value.absent(),
   });
   SitesCompanion.insert({
     this.id = const Value.absent(),
@@ -2220,6 +2310,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
     this.isArchived = const Value.absent(),
     required int createdAtMillis,
     required int updatedAtMillis,
+    this.taxMode = const Value.absent(),
+    this.taxOptionsJson = const Value.absent(),
   }) : uid = Value(uid),
        name = Value(name),
        sortOrder = Value(sortOrder),
@@ -2234,6 +2326,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
     Expression<bool>? isArchived,
     Expression<int>? createdAtMillis,
     Expression<int>? updatedAtMillis,
+    Expression<String>? taxMode,
+    Expression<String>? taxOptionsJson,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -2244,6 +2338,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
       if (isArchived != null) 'is_archived': isArchived,
       if (createdAtMillis != null) 'created_at_millis': createdAtMillis,
       if (updatedAtMillis != null) 'updated_at_millis': updatedAtMillis,
+      if (taxMode != null) 'tax_mode': taxMode,
+      if (taxOptionsJson != null) 'tax_options_json': taxOptionsJson,
     });
   }
 
@@ -2256,6 +2352,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
     Value<bool>? isArchived,
     Value<int>? createdAtMillis,
     Value<int>? updatedAtMillis,
+    Value<String>? taxMode,
+    Value<String?>? taxOptionsJson,
   }) {
     return SitesCompanion(
       id: id ?? this.id,
@@ -2266,6 +2364,8 @@ class SitesCompanion extends UpdateCompanion<Site> {
       isArchived: isArchived ?? this.isArchived,
       createdAtMillis: createdAtMillis ?? this.createdAtMillis,
       updatedAtMillis: updatedAtMillis ?? this.updatedAtMillis,
+      taxMode: taxMode ?? this.taxMode,
+      taxOptionsJson: taxOptionsJson ?? this.taxOptionsJson,
     );
   }
 
@@ -2296,6 +2396,12 @@ class SitesCompanion extends UpdateCompanion<Site> {
     if (updatedAtMillis.present) {
       map['updated_at_millis'] = Variable<int>(updatedAtMillis.value);
     }
+    if (taxMode.present) {
+      map['tax_mode'] = Variable<String>(taxMode.value);
+    }
+    if (taxOptionsJson.present) {
+      map['tax_options_json'] = Variable<String>(taxOptionsJson.value);
+    }
     return map;
   }
 
@@ -2309,7 +2415,9 @@ class SitesCompanion extends UpdateCompanion<Site> {
           ..write('sortOrder: $sortOrder, ')
           ..write('isArchived: $isArchived, ')
           ..write('createdAtMillis: $createdAtMillis, ')
-          ..write('updatedAtMillis: $updatedAtMillis')
+          ..write('updatedAtMillis: $updatedAtMillis, ')
+          ..write('taxMode: $taxMode, ')
+          ..write('taxOptionsJson: $taxOptionsJson')
           ..write(')'))
         .toString();
   }
@@ -4480,6 +4588,8 @@ typedef $$SitesTableCreateCompanionBuilder = SitesCompanion Function({
   Value<bool> isArchived,
   required int createdAtMillis,
   required int updatedAtMillis,
+  Value<String> taxMode,
+  Value<String?> taxOptionsJson,
 });
 typedef $$SitesTableUpdateCompanionBuilder = SitesCompanion Function({
   Value<int> id,
@@ -4490,6 +4600,8 @@ typedef $$SitesTableUpdateCompanionBuilder = SitesCompanion Function({
   Value<bool> isArchived,
   Value<int> createdAtMillis,
   Value<int> updatedAtMillis,
+  Value<String> taxMode,
+  Value<String?> taxOptionsJson,
 });
 
 class $$SitesTableFilterComposer extends Composer<_$AppDatabase, $SitesTable> {
@@ -4537,6 +4649,16 @@ class $$SitesTableFilterComposer extends Composer<_$AppDatabase, $SitesTable> {
 
   ColumnFilters<int> get updatedAtMillis => $composableBuilder(
     column: $table.updatedAtMillis,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taxMode => $composableBuilder(
+    column: $table.taxMode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get taxOptionsJson => $composableBuilder(
+    column: $table.taxOptionsJson,
     builder: (column) => ColumnFilters(column),
   );
 }
@@ -4589,6 +4711,16 @@ class $$SitesTableOrderingComposer
     column: $table.updatedAtMillis,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get taxMode => $composableBuilder(
+    column: $table.taxMode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get taxOptionsJson => $composableBuilder(
+    column: $table.taxOptionsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$SitesTableAnnotationComposer
@@ -4629,6 +4761,14 @@ class $$SitesTableAnnotationComposer
     column: $table.updatedAtMillis,
     builder: (column) => column,
   );
+
+  GeneratedColumn<String> get taxMode =>
+      $composableBuilder(column: $table.taxMode, builder: (column) => column);
+
+  GeneratedColumn<String> get taxOptionsJson => $composableBuilder(
+    column: $table.taxOptionsJson,
+    builder: (column) => column,
+  );
 }
 
 class $$SitesTableTableManager
@@ -4667,6 +4807,8 @@ class $$SitesTableTableManager
                 Value<bool> isArchived = const Value.absent(),
                 Value<int> createdAtMillis = const Value.absent(),
                 Value<int> updatedAtMillis = const Value.absent(),
+                Value<String> taxMode = const Value.absent(),
+                Value<String?> taxOptionsJson = const Value.absent(),
               }) => SitesCompanion(
                 id: id,
                 uid: uid,
@@ -4676,6 +4818,8 @@ class $$SitesTableTableManager
                 isArchived: isArchived,
                 createdAtMillis: createdAtMillis,
                 updatedAtMillis: updatedAtMillis,
+                taxMode: taxMode,
+                taxOptionsJson: taxOptionsJson,
               ),
           createCompanionCallback:
               ({
@@ -4687,6 +4831,8 @@ class $$SitesTableTableManager
                 Value<bool> isArchived = const Value.absent(),
                 required int createdAtMillis,
                 required int updatedAtMillis,
+                Value<String> taxMode = const Value.absent(),
+                Value<String?> taxOptionsJson = const Value.absent(),
               }) => SitesCompanion.insert(
                 id: id,
                 uid: uid,
@@ -4696,6 +4842,8 @@ class $$SitesTableTableManager
                 isArchived: isArchived,
                 createdAtMillis: createdAtMillis,
                 updatedAtMillis: updatedAtMillis,
+                taxMode: taxMode,
+                taxOptionsJson: taxOptionsJson,
               ),
           withReferenceMapper: (p0) => p0
               .map((e) => (e.readTable(table), BaseReferences(db, table, e)))

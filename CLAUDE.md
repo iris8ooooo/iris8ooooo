@@ -120,9 +120,9 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 
 - [x] **M1: 스캐폴드 + 달력 + 프리셋/커스텀 공수 입력 + 월 합계** — 완료 (2026-08-31, 테스트 76개 그린, 4차원 리뷰+적대적 검증 통과. 메모/프리셋 관리/간이 백업/다크모드 팔레트 포함)
 - [x] **M2: 업체 관리 + 단가 이력 + 색상 표시 + 부가항목** — 완료 (2026-09-02, 테스트 111개 그린. schemaVersion 2: Sites/SiteRateHistories/DayExtraItems 추가, v1→v2 골든 데이터 마이그레이션 테스트, 단가 해석(적용시작일 기준·오버라이드 우선) 순수 함수, 월 세전 수입 카드, 백업 봉투 확장(uid 재매핑))
-- [ ] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** ← 다음
-  - Sites에 taxMode 컬럼 ADD COLUMN(schemaVersion 3), 4대보험 요율 2026 조사, DayExtraItems.isTaxable 활용, MonthSummary.netWon 채우기
-- [ ] M4: 백업/복원 + PDF 증빙 + 캡쳐 공유
+- [x] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** — 완료 (2026-09-02, 테스트 156개 그린. schemaVersion 3: Sites.taxMode/taxOptionsJson ADD COLUMN, v1/v2→v3 골든 마이그레이션 테스트, 세금 엔진(3.3%/4대보험+일용소득세) 정수 계산, 연도별 요율 테이블+사용자 오버라이드, 기간 정산 화면(마감 주기), 통계 화면, 공휴일 2025~2027 내장)
+- [ ] **M4: 백업/복원 + PDF 증빙 + 캡쳐 공유** ← 다음
+  - base64 텍스트 내보내기/복원(기존 JSON 봉투 재사용), JSON 파일 내보내기/가져오기(share/file picker), 자동 로컬 스냅샷 7일 + 복원 메뉴, 월 공수확인서 PDF(pdf+printing), 달력 캡쳐 공유
 - [ ] M5: 홈 위젯 (iOS/Android)
 - [ ] M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비
 
@@ -138,9 +138,21 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 마이그레이션 테스트: `drift_schemas/drift_schema_vN.json` 덤프 커밋 + `test/data/generated_migrations/`(drift_dev schema generate) + `test/data/migration_test.dart`의 골든 데이터 테스트. 스키마 바꿀 때마다 덤프·generate 재실행 필수
 - 무료 티어 "업체 3개까지" 제한은 M6 IAP와 함께 넣는다 (지금은 무제한)
 
+### M3에서 확정된 규칙
+- 세금은 저장하지 않고 조회 시점에 계산한다 (`domain/tax_engine.dart`). 업체별 `Sites.taxMode`('none'|'withholding33'|'insurance4') + `taxOptionsJson`(TaxOptions). 기본 'none' — 잘못된 공제보다 공제 없음이 안전
+- 3.3% = 소득세 3% + 지방소득세(소득세의 10%). 4대보험 = 근로자 부담분(국민연금·건강·장기요양(건강보험료의 %)·고용) + 옵션 일용근로소득세(일 15만원 공제 후 6%, 세액공제 55% → 실효 2.7%, 소액부징수 1,000원, 지방소득세 10%). 국민연금·건강보험은 해당 업체 월 근무일 ≥ pensionHealthMinDays(기본 8, 0=항상)일 때만. 국민연금 기준소득은 상·하한 적용 후 천원 미만 절사
+- 비율은 전부 십만분율(per100k) 정수. 요율은 연도별 상수(`domain/tax_rates.dart`, 2025/2026) + AppSettings `tax_rates_override_<year>` JSON 병합(모르는 키·음수 무시). 미래 연도는 최신 테이블 승계. **매년 초 요율 상수 갱신 필수**
+- 끝전: AppSettings `tax_rounding` ('floor10' 기본 | 'exact'). 모든 공제 항목에 개별 적용
+- 과세 기준 = 노무비(공수×단가) + `isTaxable` 가산 항목. 공제 항목은 과세 기준을 줄이지 않는다. 일용근로소득세는 날짜별 과세 기준으로 계산
+- 기간 정산(`domain/settlement.dart`)이 월 카드·정산 화면·통계의 단일 계산 경로. 업체 미지정 묶음(siteId null)은 세금 없음. 세율은 기간 종료일 연도 기준
+- 정산 마감 주기 시작일은 AppSettings `settle_cycle_start_day`(1~28). 정산 화면 family 키는 `periodKey(from,to) = from×1e8 + to`
+- 공휴일은 `domain/korean_holidays.dart` 상수(2025~2027, 2027은 잠정). API 호출 없음. 매년 월력요항 확정 시 갱신
+- 통계는 연간 12개월을 정산 함수로 각각 계산해 파생 (별도 집계 로직 없음)
+
 ## 백로그
 
 - 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안)
+- 2027년 공휴일 대체공휴일 확정치 반영 / 2026.7 국민연금 기준소득 상한 개정치 반영
 - 저가 실기기(갤럭시 A 시리즈) `--profile` 콜드 스타트 측정을 마일스톤 완료 게이트로 (오너 실기기 확보 시)
 
 ## 테스트 작성 주의 (재발 방지)
