@@ -125,7 +125,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M5: 홈 위젯 (iOS/Android)** — 완료 (2026-09-02, 테스트 186개 그린. home_widget 0.9 + 서비스 추상화, 순수 페이로드 빌더(표시 문자열만), 값 변경 시에만 저장·갱신하는 HomeWidgetSyncer, iOS WidgetKit 확장 `ios/GongsuWidget`(xcodeproj 스크립트로 타깃 추가, App Group), Android AppWidgetProvider+RemoteViews 2×2. 네이티브 컴파일은 오너 Mac 첫 실행이 검증 게이트)
 - [x] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** — 완료 (2026-09-02, 테스트 207개 그린. shared_preferences 미러 + 설정 화면(글씨 3단계·화면 모드·주 시작 요일·테마 색), 온보딩 직군 선택(미수정 시드만 교체), in_app_purchase 비소모성 `gongsu_pro` + 페이월/복원 + 게이팅(PDF·위젯·업체 4개+·테마), 앱 아이콘 코드 생성, Android 서명 설정, 개인정보처리방침/스토어 문안/출시 가이드)
 
-각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것.
+각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것. 실행 가이드: `gongsu_ledger/docs/RUN_GUIDE.md`(Mac·아이폰, M1~M6 체크리스트) / `RUN_GUIDE_WINDOWS.md`(Windows·갤럭시, APK 사이드로드·에뮬레이터 포함) / `RELEASE_GUIDE.md`(출시).
 
 ### M2에서 확정된 규칙
 - 단가는 기록에 저장하지 않는다. `SiteRateHistories`에서 "날짜 이하 가장 늦은 effectiveFrom" 행으로 조회 시점 해석 (`domain/rate_resolver.dart`). 기록별 `unitRateWonOverride`가 있으면 그것이 우선
