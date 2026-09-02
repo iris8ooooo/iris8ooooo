@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/app.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/data/repositories/site_repository.dart';
 import 'package:gongsu_ledger/data/repositories/work_entry_repository.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/domain/tax_engine.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 
 /// M3 플로: 업체 세금 방식 → 월 카드 실수령, 정산 화면, 통계, 세율 설정.
 /// (DB 검증은 스트림이 아닌 일반 쿼리만 — CLAUDE.md '테스트 작성 주의')
@@ -22,6 +24,9 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     return ProviderScope(
       overrides: [
+        localPrefsProvider.overrideWithValue(
+          MemoryLocalPrefs({'onboarding_done': '1'}),
+        ),
         databaseProvider.overrideWith((ref) {
           ref.onDispose(db.close);
           return db;

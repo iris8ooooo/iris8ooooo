@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/app.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/data/repositories/site_repository.dart';
 import 'package:gongsu_ledger/data/repositories/work_entry_repository.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
@@ -12,6 +13,7 @@ import 'package:gongsu_ledger/domain/tax_engine.dart';
 import 'package:gongsu_ledger/domain/widget_payload.dart';
 import 'package:gongsu_ledger/services/home_widget_service.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 import 'package:gongsu_ledger/state/widget_providers.dart';
 
 /// 가짜 위젯 서비스: 저장된 값과 갱신 횟수를 기록한다.
@@ -45,6 +47,9 @@ void main() {
     widgetService = FakeHomeWidgetService();
     return ProviderScope(
       overrides: [
+        localPrefsProvider.overrideWithValue(
+          MemoryLocalPrefs({'onboarding_done': '1', 'pro_unlocked': '1'}),
+        ),
         databaseProvider.overrideWith((ref) {
           ref.onDispose(db.close);
           return db;

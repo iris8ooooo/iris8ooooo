@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/data/backup/snapshot_service.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/data/export/work_report_data.dart';
 import 'package:gongsu_ledger/data/export/work_report_pdf.dart';
 import 'package:gongsu_ledger/data/repositories/day_item_repository.dart';
@@ -28,10 +29,13 @@ import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/domain/tax_engine.dart';
 import 'package:gongsu_ledger/state/backup_providers.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 import 'package:gongsu_ledger/state/site_providers.dart';
 import 'package:gongsu_ledger/state/tax_providers.dart';
 import 'package:gongsu_ledger/ui/app_theme.dart';
 import 'package:gongsu_ledger/ui/calendar/calendar_page.dart';
+import 'package:gongsu_ledger/ui/onboarding/onboarding_page.dart';
+import 'package:gongsu_ledger/ui/pro/paywall_page.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 const String shotDir = String.fromEnvironment('SHOT_DIR');
@@ -91,11 +95,19 @@ void main() {
     );
   }
 
-  Widget buildApp({ThemeMode mode = ThemeMode.light}) {
+  Widget buildApp({
+    ThemeMode mode = ThemeMode.light,
+    Map<String, String>? prefs,
+  }) {
     return RepaintBoundary(
       key: shotKey,
       child: ProviderScope(
         overrides: [
+          localPrefsProvider.overrideWithValue(
+            MemoryLocalPrefs(
+              prefs ?? {'onboarding_done': '1', 'pro_unlocked': '1'},
+            ),
+          ),
           databaseProvider.overrideWith((ref) {
             ref.onDispose(db.close);
             return db;
@@ -117,7 +129,11 @@ void main() {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
-          home: const CalendarPage(),
+          home:
+              (prefs ?? const {'onboarding_done': '1'})['onboarding_done'] ==
+                  '1'
+              ? const CalendarPage()
+              : const OnboardingPage(),
         ),
       ),
     );
@@ -330,6 +346,25 @@ void main() {
       );
       File('$shotDir/공수확인서_샘플_2026-09.pdf').writeAsBytesSync(pdf);
     });
+
+    // 설정 · 프로 안내 (M6)
+    await openMenu(tester, '설정');
+    await shot(tester, '11_설정');
+    await back(tester);
+    await tester.pumpWidget(
+      buildApp(prefs: {'onboarding_done': '1', 'pro_unlocked': '0'}),
+    );
+    await tester.pumpAndSettle();
+    tester
+        .state<NavigatorState>(find.byType(Navigator))
+        .push(MaterialPageRoute<void>(builder: (_) => const PaywallPage()));
+    await shot(tester, '12_프로_안내');
+    tester.state<NavigatorState>(find.byType(Navigator)).pop();
+    await tester.pumpAndSettle();
+
+    // 온보딩 (첫 실행)
+    await tester.pumpWidget(buildApp(prefs: {}));
+    await shot(tester, '00_온보딩_직군_선택');
 
     // 다크모드 달력.
     await tester.pumpWidget(buildApp(mode: ThemeMode.dark));

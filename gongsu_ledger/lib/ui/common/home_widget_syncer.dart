@@ -5,6 +5,7 @@ import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
 import '../../domain/settlement.dart';
 import '../../domain/widget_payload.dart';
+import '../../state/pro_providers.dart';
 import '../../state/tax_providers.dart';
 import '../../state/widget_providers.dart';
 
@@ -50,12 +51,15 @@ class _HomeWidgetSyncerState extends ConsumerState<HomeWidgetSyncer>
     if (ym != _ym) setState(() => _ym = ym);
   }
 
-  void _maybePush(PeriodSettlement settlement) {
-    final payload = buildWidgetPayload(
-      ym: _ym,
-      settlement: settlement,
-      now: DateTime.now(),
-    );
+  void _maybePush(PeriodSettlement settlement, {required bool isPro}) {
+    // 위젯은 프로 기능 — 프로가 아니면 숫자 대신 잠김 표식만 보낸다.
+    final payload = isPro
+        ? buildWidgetPayload(
+            ym: _ym,
+            settlement: settlement,
+            now: DateTime.now(),
+          )
+        : buildLockedWidgetPayload(ym: _ym, now: DateTime.now());
     final last = _lastSent;
     if (last != null && _sameDisplay(payload, last)) return;
     _lastSent = payload;
@@ -81,7 +85,10 @@ class _HomeWidgetSyncerState extends ConsumerState<HomeWidgetSyncer>
 
   @override
   Widget build(BuildContext context) {
-    _maybePush(ref.watch(monthSettlementProvider(_ym)));
+    _maybePush(
+      ref.watch(monthSettlementProvider(_ym)),
+      isPro: ref.watch(proProvider),
+    );
     return widget.child;
   }
 }

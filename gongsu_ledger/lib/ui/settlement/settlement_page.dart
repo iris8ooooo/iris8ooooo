@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/pro_limits.dart';
+import '../pro/pro_gate.dart';
+
 import '../../data/db/app_database.dart';
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/date_key.dart';
@@ -152,12 +155,19 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
             key: const ValueKey('export-pdf'),
             tooltip: '공수 확인서 PDF',
             icon: const Icon(Icons.picture_as_pdf),
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) =>
-                    ReportExportPage(fromKey: _fromKey, toKey: _toKey),
-              ),
-            ),
+            onPressed: () async {
+              // 공수 확인서 PDF 는 프로 기능.
+              if (!await ensurePro(context, ref, feature: ProFeature.pdf)) {
+                return;
+              }
+              if (!context.mounted) return;
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) =>
+                      ReportExportPage(fromKey: _fromKey, toKey: _toKey),
+                ),
+              );
+            },
           ),
           IconButton(
             tooltip: '마감 주기 설정',

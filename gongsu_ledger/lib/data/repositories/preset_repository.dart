@@ -3,6 +3,8 @@ import 'package:drift/drift.dart';
 import '../../domain/marker_palette.dart';
 import '../../domain/uid.dart';
 import '../db/app_database.dart';
+import '../seed/default_presets.dart';
+import '../seed/seed_switch.dart';
 import '../db/daos/preset_dao.dart';
 
 class PresetRepository {
@@ -58,6 +60,47 @@ class PresetRepository {
 
   /// 삭제 대신 보관. 과거 기록 표시는 스냅샷 덕분에 그대로 유지된다.
   Future<void> archive(int id) => _dao.archive(id, _now);
+
+  /// 온보딩 직군 선택 적용 — 미수정 시드만 교체한다 (`seed_switch.dart` 규칙).
+  Future<SeedSwitchPlan> applyJobSeed(JobKind kind) async {
+    final existing = await _dao.getAll();
+    final plan = planSeedSwitch(
+      existing: [
+        for (final p in existing)
+          (
+            id: p.id,
+            uid: p.uid,
+            isArchived: p.isArchived,
+            createdAtMillis: p.createdAtMillis,
+            updatedAtMillis: p.updatedAtMillis,
+          ),
+      ],
+      target: seedPresetsFor(kind),
+    );
+    if (plan.isNoop) return plan;
+    await _dao.transaction(() async {
+      for (final id in plan.archiveIds) {
+        await _dao.setArchivedSilently(id, true);
+      }
+      for (final id in plan.unarchiveIds) {
+        await _dao.setArchivedSilently(id, false);
+      }
+      for (final s in plan.inserts) {
+        await _dao.insertPreset(
+          PresetsCompanion.insert(
+            uid: s.uid,
+            name: s.name,
+            centiGongsu: s.centiGongsu,
+            colorId: Value(s.colorId),
+            sortOrder: s.sortOrder,
+            createdAtMillis: AppDatabase.seedTimestampMillis,
+            updatedAtMillis: AppDatabase.seedTimestampMillis,
+          ),
+        );
+      }
+    });
+    return plan;
+  }
 
   Future<void> reorder(List<int> orderedIds) => _dao.reorder(orderedIds, _now);
 

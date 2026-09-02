@@ -20,6 +20,7 @@ struct GongsuEntry: TimelineEntry {
   let workedDays: String
   let moneyLabel: String
   let money: String
+  let locked: Bool
 
   static func load() -> GongsuEntry {
     let defaults = UserDefaults(suiteName: appGroupId)
@@ -30,13 +31,14 @@ struct GongsuEntry: TimelineEntry {
       gongsu: defaults?.string(forKey: "widget_gongsu") ?? "0",
       workedDays: defaults?.string(forKey: "widget_worked_days") ?? "0",
       moneyLabel: defaults?.string(forKey: "widget_money_label") ?? "",
-      money: defaults?.string(forKey: "widget_money") ?? ""
+      money: defaults?.string(forKey: "widget_money") ?? "",
+      locked: defaults?.string(forKey: "widget_locked") == "1"
     )
   }
 
   static let placeholder = GongsuEntry(
     date: Date(), monthLabel: "9월", gongsu: "21.5", workedDays: "18",
-    moneyLabel: "실수령", money: "3,870,000원")
+    moneyLabel: "실수령", money: "3,870,000원", locked: false)
 }
 
 struct GongsuProvider: TimelineProvider {
@@ -56,6 +58,33 @@ struct GongsuWidgetView: View {
   let entry: GongsuEntry
 
   var body: some View {
+    if entry.locked {
+      lockedBody
+    } else {
+      numbersBody
+    }
+  }
+
+  /// 프로가 아닐 때: 숫자 대신 안내.
+  private var lockedBody: some View {
+    VStack(alignment: .leading, spacing: 6) {
+      Text("공수장부")
+        .font(.system(size: 14, weight: .semibold))
+        .foregroundColor(.secondary)
+      Image(systemName: "lock.fill")
+        .font(.system(size: 22))
+        .foregroundColor(accent)
+      Text("위젯은 프로에서\n사용할 수 있어요")
+        .font(.system(size: 14, weight: .semibold))
+      Text("앱 → 설정 → 프로")
+        .font(.system(size: 12))
+        .foregroundColor(.secondary)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    .modifier(GongsuWidgetBackground())
+  }
+
+  private var numbersBody: some View {
     VStack(alignment: .leading, spacing: 2) {
       Text("\(entry.monthLabel) 공수")
         .font(.system(size: 14, weight: .semibold))

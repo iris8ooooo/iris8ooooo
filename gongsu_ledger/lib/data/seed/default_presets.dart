@@ -109,3 +109,30 @@ const List<SeedPreset> shipyardSeedPresets = [
     sortOrder: 5,
   ),
 ];
+
+/// 온보딩 직군.
+enum JobKind {
+  construction('건설 · 일용', '1 / 1.5 / 2 / 0.5 / 휴무'),
+  shipyard('조선소 · 플랜트', 'A 0.9 / B 1.0 / E잔업 1.5 / 야간 2 / 반공 0.5 / 휴무'),
+  custom('직접 만들기', '기본 프리셋 없이 시작 — 프리셋 관리에서 내 공수를 만들어요');
+
+  const JobKind(this.label, this.description);
+
+  final String label;
+  final String description;
+
+  static JobKind parse(String? raw) =>
+      values.firstWhere((v) => v.name == raw, orElse: () => construction);
+}
+
+List<SeedPreset> seedPresetsFor(JobKind kind) => switch (kind) {
+  JobKind.construction => constructionSeedPresets,
+  JobKind.shipyard => shipyardSeedPresets,
+  JobKind.custom => const [],
+};
+
+/// 모든 시드 uid — "사용자가 만든 프리셋"과 구분하는 기준.
+final Set<String> allSeedPresetUids = {
+  for (final p in constructionSeedPresets) p.uid,
+  for (final p in shipyardSeedPresets) p.uid,
+};

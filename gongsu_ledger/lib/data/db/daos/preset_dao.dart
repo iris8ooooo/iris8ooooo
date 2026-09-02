@@ -28,6 +28,14 @@ class PresetDao extends DatabaseAccessor<AppDatabase> with _$PresetDaoMixin {
             ]))
           .get();
 
+  /// 보관 포함 전체 — 온보딩 직군 교체 계획용.
+  Future<List<Preset>> getAll() => select(presets).get();
+
+  /// updatedAt 을 건드리지 않는 보관/복원 — 온보딩 직군 교체 전용.
+  /// (updatedAt 을 올리면 '사용자 수정'으로 취급되어 다시는 교체 대상이 안 된다)
+  Future<void> setArchivedSilently(int id, bool archived) =>
+      updateFields(id, PresetsCompanion(isArchived: Value(archived)));
+
   Future<int> insertPreset(PresetsCompanion preset) =>
       into(presets).insert(preset);
 

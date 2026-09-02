@@ -7,10 +7,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/db/pre_open_guard.dart';
 import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
+import '../../state/appearance_providers.dart';
 import '../../state/backup_providers.dart';
 import '../../state/calendar_providers.dart';
 import '../backup/backup_page.dart';
 import '../presets/preset_list_page.dart';
+import '../settings/settings_page.dart';
 import '../settings/tax_rates_page.dart';
 import '../settlement/settlement_page.dart';
 import '../sites/site_list_page.dart';
@@ -155,6 +157,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
                   Navigator.of(
                     context,
                   ).push(MaterialPageRoute(builder: (_) => const BackupPage()));
+                case 'settings':
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const SettingsPage()),
+                  );
               }
             },
             itemBuilder: (context) => const [
@@ -164,6 +170,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               PopupMenuItem(value: 'presets', child: Text('프리셋 관리')),
               PopupMenuItem(value: 'backup', child: Text('백업 / 복원')),
               PopupMenuItem(value: 'tax', child: Text('세금 · 요율 설정')),
+              PopupMenuItem(value: 'settings', child: Text('설정')),
             ],
           ),
         ],
@@ -241,7 +248,7 @@ class _DbErrorView extends StatelessWidget {
   }
 }
 
-class _WeekdayHeader extends StatelessWidget {
+class _WeekdayHeader extends ConsumerWidget {
   const _WeekdayHeader();
 
   static const Map<int, String> _names = {
@@ -255,13 +262,16 @@ class _WeekdayHeader extends StatelessWidget {
   };
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final scheme = Theme.of(context).colorScheme;
+    final weekStart = ref.watch(
+      appearanceProvider.select((a) => a.weekStart.weekday),
+    );
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
       child: Row(
         children: [
-          for (final weekday in weekdayOrder())
+          for (final weekday in weekdayOrder(weekStartWeekday: weekStart))
             Expanded(
               child: Center(
                 child: Text(

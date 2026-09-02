@@ -20,6 +20,21 @@ class SettingsRepository {
   /// 정산 마감 주기 시작일 (1~28). 예: 21 → 전월 21일 ~ 당월 20일.
   static const String keySettleCycleStartDay = 'settle_cycle_start_day';
 
+  /// M6 — prefs 미러와 같은 키를 쓴다 (`domain/appearance.dart` AppearanceKeys 참조).
+  static const String keyTextSize = 'text_size';
+  static const String keyScreenMode = 'screen_mode';
+  static const String keyWeekStart = 'week_start';
+  static const String keyThemeColor = 'theme_color';
+
+  /// '1' 이면 프로(일회성 구매) 잠금 해제.
+  static const String keyProUnlocked = 'pro_unlocked';
+
+  /// '1' 이면 온보딩(직군 선택) 완료.
+  static const String keyOnboardingDone = 'onboarding_done';
+
+  /// 온보딩에서 고른 직군 ('construction' | 'shipyard' | 'custom').
+  static const String keyJobKind = 'job_kind';
+
   /// 연도별 세율 오버라이드 JSON. 값이 비어 있으면 기본 테이블 사용.
   static String keyTaxRatesOverride(int year) => 'tax_rates_override_$year';
 

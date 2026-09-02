@@ -5,9 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/app.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/data/repositories/site_repository.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 
 /// M2 플로: 업체 선택 입력 → 세전 수입 카드, 부가항목, 날짜별 단가 오버라이드.
 /// (DB 검증은 스트림이 아닌 일반 쿼리만 — CLAUDE.md '테스트 작성 주의')
@@ -20,6 +22,9 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     return ProviderScope(
       overrides: [
+        localPrefsProvider.overrideWithValue(
+          MemoryLocalPrefs({'onboarding_done': '1'}),
+        ),
         databaseProvider.overrideWith((ref) {
           ref.onDispose(db.close);
           return db;

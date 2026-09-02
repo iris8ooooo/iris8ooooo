@@ -28,6 +28,9 @@ class WidgetKeys {
   /// "9/2 14:30" — 앱이 마지막으로 값을 보낸 시각
   static const String updatedAt = 'widget_updated_at';
 
+  /// "1" 이면 프로가 아니라 잠김 — 위젯은 숫자 대신 안내 문구를 보여준다
+  static const String locked = 'widget_locked';
+
   static const List<String> all = [
     monthLabel,
     gongsu,
@@ -35,8 +38,23 @@ class WidgetKeys {
     moneyLabel,
     money,
     updatedAt,
+    locked,
   ];
 }
+
+/// 프로가 아닐 때의 페이로드 — 숫자 없이 잠김 표식만.
+Map<String, String> buildLockedWidgetPayload({
+  required int ym,
+  required DateTime now,
+}) => {
+  WidgetKeys.monthLabel: '${monthOfYm(ym)}월',
+  WidgetKeys.gongsu: '',
+  WidgetKeys.workedDays: '',
+  WidgetKeys.moneyLabel: '',
+  WidgetKeys.money: '',
+  WidgetKeys.updatedAt: _stamp(now),
+  WidgetKeys.locked: '1',
+};
 
 /// 달의 정산 결과 → 위젯 표시 문자열 묶음. 순수 함수.
 ///
@@ -57,10 +75,13 @@ Map<String, String> buildWidgetPayload({
     WidgetKeys.workedDays: '${settlement.workedDays}',
     WidgetKeys.moneyLabel: !hasMoney ? '' : (afterTax ? '실수령' : '세전'),
     WidgetKeys.money: !hasMoney ? '' : '${groupDigits(won)}원',
-    WidgetKeys.updatedAt:
-        '${now.month}/${now.day} ${_two(now.hour)}:${_two(now.minute)}',
+    WidgetKeys.updatedAt: _stamp(now),
+    WidgetKeys.locked: '0',
   };
 }
+
+String _stamp(DateTime now) =>
+    '${now.month}/${now.day} ${_two(now.hour)}:${_two(now.minute)}';
 
 /// 노무비(공수×단가)·가산·공제 중 하나라도 실제 금액이 있는가.
 /// (PeriodSettlement.hasMoney 는 정산 화면용으로 '단가 없는 공수'도 포함한다)

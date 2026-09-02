@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gongsu_ledger/app.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 
 void main() {
   // 테스트마다 독립 in-memory DB를 새로 만들므로 이 경고는 해당 없음.
@@ -18,6 +20,9 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     return ProviderScope(
       overrides: [
+        localPrefsProvider.overrideWithValue(
+          MemoryLocalPrefs({'onboarding_done': '1'}),
+        ),
         databaseProvider.overrideWith((ref) {
           ref.onDispose(db.close);
           return db;

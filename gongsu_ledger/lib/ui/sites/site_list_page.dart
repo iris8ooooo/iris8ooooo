@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/pro_limits.dart';
+import '../../state/pro_providers.dart';
+import '../pro/pro_gate.dart';
+
 import '../../data/db/app_database.dart';
 import '../../domain/date_key.dart';
 import '../../domain/marker_palette.dart';
@@ -63,9 +67,19 @@ class SiteListPage extends ConsumerWidget {
       floatingActionButton: FloatingActionButton.extended(
         icon: const Icon(Icons.add),
         label: const Text('업체 추가'),
-        onPressed: () =>
-            Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const SiteEditPage())),
+        onPressed: () async {
+          // 무료 티어 업체 상한 — 프로가 아니면 페이월.
+          if (!canAddSite(
+            activeSites: sites.length,
+            isPro: ref.read(proProvider),
+          )) {
+            final ok = await ensurePro(context, ref, feature: ProFeature.sites);
+            if (!ok) return;
+          }
+          if (!context.mounted) return;
+          Navigator.of(context)
+              .push(MaterialPageRoute(builder: (_) => const SiteEditPage()));
+        },
       ),
       body: sites.isEmpty && sitesAsync.hasValue
           ? Center(

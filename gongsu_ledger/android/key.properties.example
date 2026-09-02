@@ -1,0 +1,6 @@
+# 복사해서 android/key.properties 로 저장하고 값을 채우세요 (git 에 올라가지 않음).
+# 키 만들기: RELEASE_GUIDE.md 3-1
+storePassword=여기에_키스토어_비밀번호
+keyPassword=여기에_키_비밀번호
+keyAlias=upload
+storeFile=upload-keystore.jks

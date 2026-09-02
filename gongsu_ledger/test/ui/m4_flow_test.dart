@@ -12,11 +12,13 @@ import 'package:gongsu_ledger/data/backup/backup_codec.dart';
 import 'package:gongsu_ledger/data/backup/backup_text_codec.dart';
 import 'package:gongsu_ledger/data/backup/snapshot_service.dart';
 import 'package:gongsu_ledger/data/db/app_database.dart';
+import 'package:gongsu_ledger/data/local_prefs.dart';
 import 'package:gongsu_ledger/data/repositories/work_entry_repository.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/services/share_service.dart';
 import 'package:gongsu_ledger/state/backup_providers.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
+import 'package:gongsu_ledger/state/prefs_providers.dart';
 
 class FakeShareService implements ShareService {
   final List<String> texts = [];
@@ -77,6 +79,9 @@ void main() {
     db = AppDatabase(NativeDatabase.memory());
     return ProviderScope(
       overrides: [
+        localPrefsProvider.overrideWithValue(
+          MemoryLocalPrefs({'onboarding_done': '1', 'pro_unlocked': '1'}),
+        ),
         databaseProvider.overrideWith((ref) {
           ref.onDispose(db.close);
           return db;

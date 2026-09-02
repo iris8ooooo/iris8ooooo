@@ -106,7 +106,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - **연속 입력은 기본 동작** (설정 아님): 빈 날 첫 입력은 저장 후 시트 자동 닫힘, 기록 있는 날은 시트 유지 append
 - **마이그레이션**: additive-only 하드 룰(CREATE TABLE/ADD COLUMN/CREATE INDEX만). drift 열기 전 pre-open guard가 user_version 검사 → 업그레이드 직전 DB 파일 + -wal/-shm 동반 백업(최근 2세트 회전), 다운그레이드는 열지 않고 안내
 - **간이 JSON 백업을 M1부터 탑재** (M4 정식 백업의 축소판, 같은 봉투 규약): 내보내기는 삭제 행 포함, 가져오기는 병합 전용(uid upsert, updatedAt 최신 승리) — 기존 데이터를 지우는 경로 없음. 백업 schemaVersion > 앱 버전이면 명시 거부
-- **provider 구조**: 월 쿼리 1회(monthEntriesProvider)가 유일한 소스, 월 합계/일 상세는 파생. family 키는 전부 int. 이웃 달 ±1 미리 구독. main()은 runApp만(DB lazy open)
+- **provider 구조**: 월 쿼리 1회(monthEntriesProvider)가 유일한 소스, 월 합계/일 상세는 파생. family 키는 전부 int. 이웃 달 ±1 미리 구독. main()은 shared_preferences 1회 로드 + runApp만(DB lazy open — M6에서 첫 프레임 설정값을 위해 prefs 읽기 추가)
 - **M6 온보딩 직군 선택 규칙(선확정)**: 사용자가 수정하지 않은 시드 프리셋(고정 uid + createdAt==updatedAt)만 교체, 손댄 프리셋은 불변
 - 주 시작 요일은 M1에서 일요일 상수. M6에서 설정으로 풀 때 첫 프레임 깜빡임 방지를 위해 경량 동기 저장소(SharedPreferences)에 미러할 것
 
@@ -123,7 +123,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M3: 세금 정산 + 기간 정산 + 통계 + 공휴일** — 완료 (2026-09-02, 테스트 156개 그린. schemaVersion 3: Sites.taxMode/taxOptionsJson ADD COLUMN, v1/v2→v3 골든 마이그레이션 테스트, 세금 엔진(3.3%/4대보험+일용소득세) 정수 계산, 연도별 요율 테이블+사용자 오버라이드, 기간 정산 화면(마감 주기), 통계 화면, 공휴일 2025~2027 내장)
 - [x] **M4: 백업/복원 + PDF 증빙 + 캡쳐 공유** — 완료 (2026-09-02, 테스트 177개 그린. base64 텍스트 백업 `GSJB1:`+gzip(공유/복사·붙여넣기 복원), JSON 파일 내보내기/가져오기(share_plus/file_picker), 자동 로컬 스냅샷 7일 회전+복원 메뉴, 월 공수확인서 PDF(pdf+printing, 나눔고딕 내장, 미리보기/공유/이미지), 달력 캡쳐 PNG 공유. 플러그인은 서비스 추상화로 테스트에서 가짜 주입)
 - [x] **M5: 홈 위젯 (iOS/Android)** — 완료 (2026-09-02, 테스트 186개 그린. home_widget 0.9 + 서비스 추상화, 순수 페이로드 빌더(표시 문자열만), 값 변경 시에만 저장·갱신하는 HomeWidgetSyncer, iOS WidgetKit 확장 `ios/GongsuWidget`(xcodeproj 스크립트로 타깃 추가, App Group), Android AppWidgetProvider+RemoteViews 2×2. 네이티브 컴파일은 오너 Mac 첫 실행이 검증 게이트)
-- [ ] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** ← 다음
+- [x] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** — 완료 (2026-09-02, 테스트 207개 그린. shared_preferences 미러 + 설정 화면(글씨 3단계·화면 모드·주 시작 요일·테마 색), 온보딩 직군 선택(미수정 시드만 교체), in_app_purchase 비소모성 `gongsu_pro` + 페이월/복원 + 게이팅(PDF·위젯·업체 4개+·테마), 앱 아이콘 코드 생성, Android 서명 설정, 개인정보처리방침/스토어 문안/출시 가이드)
 
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것.
 
@@ -164,11 +164,21 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 달 바뀜: 앱이 resumed될 때 현재 달로 재구독. 앱을 안 열면 위젯은 마지막 달 라벨("9월 공수")을 그대로 보여준다(라벨에 달이 있어 오해 없음)
 - 네이티브 코드(Swift/Kotlin)는 이 환경에서 컴파일 검증 불가 — 오너 Mac의 첫 `flutter run`이 검증 게이트. 위젯 프로 게이팅은 M6 IAP와 함께 넣는다(지금은 전원 사용)
 
+### M6에서 확정된 규칙
+- **첫 프레임 값은 prefs 미러에서**: 화면 설정(`text_size`·`screen_mode`·`week_start`·`theme_color`)·`onboarding_done`·`pro_unlocked`는 `LocalPrefs`(shared_preferences, 테스트는 `MemoryLocalPrefs`)와 AppSettings(DB)에 같은 키·같은 문자열로 함께 쓴다. 읽기는 prefs 만(동기). 백업 봉투에는 넣지 않는다(기기 설정이지 기록이 아님)
+- 큰글씨 = 시스템 배율 × 앱 단계(100/115/130%), 상한 1.5 (`app.dart` builder). 배율은 정수 백분율로 저장(double 금지 규칙). 새 화면은 "아주 크게"에서 오버플로 없는지 위젯 테스트로 확인(`m6_flow_test` 패턴)
+- 주 시작 요일은 `appearanceProvider.weekStart`가 유일한 소스 — `monthGridDateKeys`·`weekdayOrder`에 항상 넘긴다. 주말 색은 요일 기준(순서와 무관)
+- 온보딩 직군 교체는 `data/seed/seed_switch.dart` 순수 계획 + `PresetRepository.applyJobSeed` 트랜잭션. 보관/복원은 updatedAt 을 건드리지 않는다(`setArchivedSilently`) — 올리면 '사용자 수정'이 되어 다시는 교체 대상이 안 된다. '직접 만들기' = 미수정 시드 전부 보관
+- 프로 = 비소모성 `gongsu_pro` 하나(두 스토어 동일 ID). 검증은 스토어 응답만(서버 없음), 상태는 기기 로컬 → 다른 기기는 '이전 구매 복원'. 결제 코드는 `services/purchase_service.dart` 추상화 뒤(테스트는 가짜). 게이팅 진입점은 `ui/pro/pro_gate.dart`의 `ensurePro` 하나: 업체 4개째(`freeSiteLimit`=3), 확인서 PDF, 테마 색(id≠0), 위젯(잠김 페이로드 `widget_locked`=1 → 네이티브가 안내 문구)
+- 앱 표시 버전은 `lib/app_info.dart` 상수 — pubspec `version`과 일치를 테스트로 고정. 아이콘은 `test/screenshots/app_icon_test.dart`(ICON_OUT=1)로 생성 후 `dart run flutter_launcher_icons`
+- Android 릴리스 서명은 `android/key.properties`(git 제외) 있을 때만 release 키, 없으면 debug 키로 폴백(`flutter run --release` 가능). 출시 절차·스토어 문안·개인정보처리방침은 `docs/RELEASE_GUIDE.md`·`STORE_LISTING.md`·`PRIVACY_POLICY.md`(앱 내 `privacy_text.dart`와 동일 유지)
+
 ## 백로그
 
 - 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안)
 - 2027년 공휴일 대체공휴일 확정치 반영 / 2026.7 국민연금 기준소득 상한 개정치 반영
 - 저가 실기기(갤럭시 A 시리즈) `--profile` 콜드 스타트 측정을 마일스톤 완료 게이트로 (오너 실기기 확보 시)
+- 출시 후: 실기기 프로 결제·복원 검증(샌드박스), 위젯 프로 게이팅 UX 피드백, 스토어 심사 피드백 반영
 
 ## 테스트 작성 주의 (재발 방지)
 
