@@ -24,6 +24,14 @@ import 'package:gongsu_ledger/ui/sites/site_edit_page.dart';
 
 class FakePurchaseService implements PurchaseService {
   final _controller = StreamController<PurchaseOutcome>.broadcast();
+  Future<void> Function()? handler;
+  int reconciles = 0;
+
+  @override
+  set entitlementHandler(Future<void> Function()? h) => handler = h;
+
+  @override
+  Future<void> reconcileAtStartup() async => reconciles++;
   bool available = true;
   PurchaseOutcome? onBuy = PurchaseOutcome.purchased;
   PurchaseOutcome? onRestore = PurchaseOutcome.restored;
@@ -42,7 +50,10 @@ class FakePurchaseService implements PurchaseService {
   @override
   Future<void> buy() async {
     buys++;
-    if (onBuy != null) _controller.add(onBuy!);
+    if (onBuy != null) {
+      if (onBuy == PurchaseOutcome.purchased) await handler?.call();
+      _controller.add(onBuy!);
+    }
   }
 
   @override
@@ -226,7 +237,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('theme-color-1')));
       await tester.pumpAndSettle();
       expect(find.byType(PaywallPage), findsOneWidget);
-      expect(find.text("'테마 색상'은 프로 기능이에요."), findsOneWidget);
+      expect(find.text('프로 기능이에요: 테마 색상'), findsOneWidget);
       await unmountApp(tester);
     });
   });

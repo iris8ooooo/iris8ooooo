@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../common/choice_chip_row.dart';
+
 import '../../data/repositories/settings_repository.dart';
 import '../../domain/percent_format.dart';
 import '../../domain/tax_engine.dart';
@@ -159,15 +161,13 @@ class _TaxRatesPageState extends ConsumerState<TaxRatesPage> {
                     style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  SegmentedButton<TaxRounding>(
-                    segments: [
-                      for (final r in TaxRounding.values)
-                        ButtonSegment(value: r, label: Text(r.label)),
-                    ],
-                    selected: {rounding},
-                    onSelectionChanged: (s) => ref
+                  ChoiceChipRow<TaxRounding>(
+                    options: TaxRounding.values,
+                    selected: rounding,
+                    labelOf: (r) => r.label,
+                    onSelected: (r) => ref
                         .read(settingsRepoProvider)
-                        .set(SettingsRepository.keyTaxRounding, s.first.code),
+                        .set(SettingsRepository.keyTaxRounding, r.code),
                   ),
                   const SizedBox(height: 6),
                   Text(

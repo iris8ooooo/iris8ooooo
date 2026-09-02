@@ -251,4 +251,18 @@ void main() {
       },
     );
   });
+
+  test('업그레이드가 커밋된 뒤 버전 기록 전에 죽어도(재시도) 같은 업그레이드가 다시 안전하게 돈다', () async {
+    final connection = await verifier.startAt(2);
+    final db = AppDatabase(connection);
+    addTearDown(db.close);
+    await db.customSelect('SELECT 1').get(); // 열기 → v2→v3 업그레이드 실행
+    // drift 가 user_version 을 쓰기 전에 죽은 상황을 흉내 낸다.
+    await db.customStatement('PRAGMA user_version = 2');
+    await db.migration.onUpgrade(db.createMigrator(), 2, 3);
+    final version = await db.customSelect('PRAGMA user_version').getSingle();
+    expect(version.read<int>('user_version'), 3);
+    // 두 번 돌아도 컬럼/인덱스 중복 오류 없이 스키마가 그대로다.
+    await verifier.migrateAndValidate(db, 3);
+  });
 }

@@ -38,13 +38,37 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             .set(SettingsRepository.keyJobKind, kind.name);
       } catch (_) {}
       await ref.read(onboardingDoneProvider.notifier).markDone();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _busy = false);
+      await showDialog<void>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('저장하지 못했어요'),
+          content: const Text('기록 저장소를 열지 못했어요. 앱을 완전히 종료한 뒤 다시 열어 보세요.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('확인'),
+            ),
+          ],
+        ),
+      );
+      return;
     } finally {
       if (mounted) setState(() => _busy = false);
     }
     if (!mounted) return;
     if (widget.standalone) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('${kind.label} 프리셋으로 바꿨어요')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            kind == JobKind.custom
+                ? '기본 프리셋을 정리했어요'
+                : '${kind.label} 프리셋으로 바꿨어요',
+          ),
+        ),
+      );
       Navigator.of(context).pop();
     }
   }

@@ -190,6 +190,9 @@ TaxBreakdown computeInsurance4({
   required int taxableBaseWon,
   required Iterable<int> dailyTaxableWon,
   required int workedDays,
+
+  /// 정산 대상 월(1~12) — 국민연금 상·하한은 매년 7월에 바뀐다.
+  required int month,
   required TaxOptions options,
   required TaxRateTable rates,
   required TaxRounding rounding,
@@ -206,10 +209,10 @@ TaxBreakdown computeInsurance4({
   if (workedDays >= options.pensionHealthMinDays) {
     // 기준소득월액: 상·하한으로 자르고 천원 미만 절사.
     var base = taxableBaseWon;
-    if (base > rates.pensionMonthlyCapWon) base = rates.pensionMonthlyCapWon;
-    if (base < rates.pensionMonthlyFloorWon) {
-      base = rates.pensionMonthlyFloorWon;
-    }
+    final cap = rates.pensionCapFor(month);
+    final floor = rates.pensionFloorFor(month);
+    if (base > cap) base = cap;
+    if (base < floor) base = floor;
     base = (base ~/ 1000) * 1000;
     pension = applyRounding(
       percentOf(base, rates.pensionEmployeePer100k),
@@ -257,6 +260,7 @@ TaxBreakdown computeTax({
   required int taxableBaseWon,
   required Iterable<int> dailyTaxableWon,
   required int workedDays,
+  required int month,
 }) {
   if (taxableBaseWon <= 0) return TaxBreakdown.zero;
   return switch (mode) {
@@ -270,6 +274,7 @@ TaxBreakdown computeTax({
       taxableBaseWon: taxableBaseWon,
       dailyTaxableWon: dailyTaxableWon,
       workedDays: workedDays,
+      month: month,
       options: options,
       rates: rates,
       rounding: rounding,

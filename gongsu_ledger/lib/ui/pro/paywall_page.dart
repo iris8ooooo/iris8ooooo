@@ -19,15 +19,19 @@ class PaywallPage extends ConsumerStatefulWidget {
   ConsumerState<PaywallPage> createState() => _PaywallPageState();
 }
 
-class _PaywallPageState extends ConsumerState<PaywallPage> {
+class _PaywallPageState extends ConsumerState<PaywallPage>
+    with WidgetsBindingObserver {
   StreamSubscription<PurchaseOutcome>? _sub;
   String? _price;
   bool _busy = false;
+  bool _restoring = false;
   String? _message;
+  Timer? _restoreTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     final service = ref.read(purchaseServiceProvider);
     _sub = service.outcomes.listen(_onOutcome);
     service.fetchPrice().then((p) {
@@ -37,8 +41,37 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub?.cancel();
+    _restoreTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // iOS 복원은 Apple ID 로그인 창이 뜬다 — 창이 닫혀 돌아온 뒤 잠시 기다려도
+    // 아무 신호가 없으면 "복원할 구매 없음"으로 본다.
+    if (state == AppLifecycleState.resumed && _restoring) {
+      _armRestoreTimer(const Duration(seconds: 3));
+    }
+  }
+
+  void _armRestoreTimer(Duration after) {
+    _restoreTimer?.cancel();
+    _restoreTimer = Timer(after, _finishRestoreIfIdle);
+  }
+
+  void _finishRestoreIfIdle() {
+    _restoreTimer?.cancel();
+    _restoreTimer = null;
+    if (!mounted || !_busy || !_restoring) return;
+    setState(() {
+      _busy = false;
+      _restoring = false;
+      _message = ref.read(proProvider)
+          ? null
+          : '복원할 구매를 찾지 못했어요. 구매했던 스토어 계정으로 로그인되어 있는지 확인해 주세요.';
+    });
   }
 
   Future<void> _onOutcome(PurchaseOutcome outcome) async {
@@ -50,6 +83,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
         if (!mounted) return;
         setState(() {
           _busy = false;
+          _restoring = false;
           _message = null;
         });
         await showDialog<void>(
@@ -73,16 +107,19 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
       case PurchaseOutcome.pending:
         setState(() {
           _busy = false;
+          _restoring = false;
           _message = '승인을 기다리고 있어요. 승인되면 자동으로 켜져요.';
         });
       case PurchaseOutcome.canceled:
         setState(() {
           _busy = false;
+          _restoring = false;
           _message = null;
         });
       case PurchaseOutcome.error:
         setState(() {
           _busy = false;
+          _restoring = false;
           _message = '스토어와 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
         });
     }
@@ -108,18 +145,14 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
   Future<void> _restore() async {
     setState(() {
       _busy = true;
+      _restoring = true;
       _message = '이전 구매를 찾는 중…';
     });
     await ref.read(purchaseServiceProvider).restore();
-    // 복원할 것이 없으면 스토어가 아무 신호도 주지 않는다 — 잠시 뒤 안내.
-    await Future<void>.delayed(const Duration(seconds: 6));
-    if (!mounted || !_busy) return;
-    setState(() {
-      _busy = false;
-      _message = ref.read(proProvider)
-          ? null
-          : '복원할 구매를 찾지 못했어요. 구매했던 스토어 계정으로 로그인되어 있는지 확인해 주세요.';
-    });
+    if (!mounted) return;
+    // 복원할 것이 없으면 스토어가 아무 신호도 주지 않는다 — 앱이 다시 앞으로
+    // 온 뒤 3초(didChangeAppLifecycleState), 늦어도 20초 뒤에 안내.
+    _armRestoreTimer(const Duration(seconds: 20));
   }
 
   @override
@@ -142,7 +175,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                "'${widget.feature!.label}'은 프로 기능이에요.",
+                '프로 기능이에요: ${widget.feature!.label}',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w600,

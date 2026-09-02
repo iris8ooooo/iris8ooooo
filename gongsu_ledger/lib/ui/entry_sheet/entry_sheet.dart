@@ -409,8 +409,9 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
 
     // 메모 작성 중(저장 안 된 변경 있음)에는 스크림 탭/뒤로가기로 시트가
     // 그냥 닫히지 않게 확인을 거친다 — 무경고 유실 방지.
+    // 메모 화면에서 '취소'로 나왔어도 쓰다 만 글이 남아 있으면 지켜 준다.
     final memoDirty =
-        _mode == _SheetMode.memo &&
+        _memoLoaded &&
         _memoController.text.trim() != (memoAsync.valueOrNull?.body ?? '');
 
     return PopScope(
@@ -686,13 +687,20 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text('합계', style: TextStyle(fontSize: 16)),
-                Text(
-                  anyPriced
-                      ? '${formatGongsu(totalCenti)} 공수 · ${formatWon(dayLaborWon)}'
-                      : '${formatGongsu(totalCenti)} 공수',
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      anyPriced
+                          ? '${formatGongsu(totalCenti)} 공수 · ${formatWon(dayLaborWon)}'
+                          : '${formatGongsu(totalCenti)} 공수',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
                 ),
               ],

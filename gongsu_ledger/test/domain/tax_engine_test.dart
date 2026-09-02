@@ -50,6 +50,7 @@ void main() {
       '월 3,000,000원·10일 근무: 연금 142,500 / 건강 107,850 / 장기요양 13,960 / 고용 27,000',
       () {
         final t = computeInsurance4(
+          month: 9,
           taxableBaseWon: 3000000,
           dailyTaxableWon: const [],
           workedDays: 10,
@@ -68,6 +69,7 @@ void main() {
 
     test('월 8일 미만 근무면 연금·건강·장기요양은 빠지고 고용보험만', () {
       final t = computeInsurance4(
+        month: 9,
         taxableBaseWon: 1000000,
         dailyTaxableWon: const [],
         workedDays: 7,
@@ -83,6 +85,7 @@ void main() {
 
     test('최소 근무일 0이면 항상 적용', () {
       final t = computeInsurance4(
+        month: 9,
         taxableBaseWon: 1000000,
         dailyTaxableWon: const [],
         workedDays: 1,
@@ -96,8 +99,9 @@ void main() {
       expect(t.pensionWon, 47500);
     });
 
-    test('국민연금 기준소득 상한(6,370,000) 적용', () {
+    test('국민연금 기준소득 상한: 1~6월 6,370,000 / 7월부터 6,590,000', () {
       final t = computeInsurance4(
+        month: 6,
         taxableBaseWon: 10000000,
         dailyTaxableWon: const [],
         workedDays: 20,
@@ -107,10 +111,21 @@ void main() {
       );
       expect(t.pensionWon, 302570); // 6,370,000 × 4.75% = 302,575 → 절사
       expect(t.healthWon, 359500); // 건강보험은 상한 없이 1천만 × 3.595%
+      final july = computeInsurance4(
+        month: 7,
+        taxableBaseWon: 10000000,
+        dailyTaxableWon: const [],
+        workedDays: 20,
+        options: const TaxOptions(applyDailyIncomeTax: false),
+        rates: rates,
+        rounding: TaxRounding.floor10,
+      );
+      expect(july.pensionWon, 313020); // 6,590,000 × 4.75% = 313,025 → 절사
     });
 
-    test('국민연금 기준소득 하한(400,000) 적용 + 천원 미만 절사', () {
+    test('국민연금 기준소득 하한(400,000 → 7월부터 410,000) 적용 + 천원 미만 절사', () {
       final t = computeInsurance4(
+        month: 6,
         taxableBaseWon: 300000,
         dailyTaxableWon: const [],
         workedDays: 8,
@@ -119,7 +134,18 @@ void main() {
         rounding: TaxRounding.floor10,
       );
       expect(t.pensionWon, 19000); // 400,000 × 4.75%
+      final tJuly = computeInsurance4(
+        month: 7,
+        taxableBaseWon: 300000,
+        dailyTaxableWon: const [],
+        workedDays: 8,
+        options: const TaxOptions(applyDailyIncomeTax: false),
+        rates: rates,
+        rounding: TaxRounding.floor10,
+      );
+      expect(tJuly.pensionWon, 19470); // 410,000 × 4.75% = 19,475 → 절사
       final t2 = computeInsurance4(
+        month: 9,
         taxableBaseWon: 1234567,
         dailyTaxableWon: const [],
         workedDays: 8,
@@ -197,6 +223,7 @@ void main() {
 
     test('4대보험 방식에서 일자별 합산 + 옵션 끄기', () {
       final on = computeInsurance4(
+        month: 9,
         taxableBaseWon: 600000,
         dailyTaxableWon: const [200000, 200000, 200000],
         workedDays: 3,
@@ -207,6 +234,7 @@ void main() {
       expect(on.incomeTaxWon, 4050);
       expect(on.localIncomeTaxWon, 390);
       final off = computeInsurance4(
+        month: 9,
         taxableBaseWon: 600000,
         dailyTaxableWon: const [200000, 200000, 200000],
         workedDays: 3,
@@ -222,6 +250,7 @@ void main() {
     test('공제 없음 / 기준 0원이면 0', () {
       expect(
         computeTax(
+          month: 9,
           mode: TaxMode.none,
           options: TaxOptions.defaults,
           rates: rates,
@@ -234,6 +263,7 @@ void main() {
       );
       expect(
         computeTax(
+          month: 9,
           mode: TaxMode.withholding33,
           options: TaxOptions.defaults,
           rates: rates,
@@ -281,7 +311,17 @@ void main() {
     test('연도 폴백: 미래 연도는 최신 승계, 과거 연도는 가장 이른 테이블', () {
       final t2030 = defaultTaxRateTable(2030);
       expect(t2030.year, 2030);
-      expect(t2030.sameValuesAs(taxRateTable2026), true);
+      // 요율은 최신 테이블 승계, 국민연금 상·하한은 최신 7월 개정치가 연중 이어진다.
+      expect(
+        t2030.pensionEmployeePer100k,
+        taxRateTable2026.pensionEmployeePer100k,
+      );
+      expect(
+        t2030.pensionMonthlyCapWon,
+        taxRateTable2026.pensionMonthlyCapFromJulyWon,
+      );
+      expect(t2030.pensionCapFor(3), 6590000);
+      expect(t2030.pensionCapFor(9), 6590000);
       final t2024 = defaultTaxRateTable(2024);
       expect(t2024.sameValuesAs(taxRateTable2025), true);
       expect(defaultTaxRateTable(2025).pensionEmployeePer100k, 4500);

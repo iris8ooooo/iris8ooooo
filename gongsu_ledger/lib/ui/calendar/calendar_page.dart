@@ -5,6 +5,9 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/db/pre_open_guard.dart';
+import '../../data/db/connection.dart';
+import '../../data/db/db_rescue.dart';
+import '../../state/db_providers.dart';
 import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
 import '../../state/appearance_providers.dart';
@@ -56,8 +59,15 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   int _pageOfYm(int ym) => _anchorPage + ymDiff(ym, _anchorYm);
 
   void _goToMonth(int ym) {
+    final target = _pageOfYm(ym);
+    final current = _controller.page?.round() ?? _anchorPage;
+    // 먼 달로는 바로 점프 — 중간 달을 전부 구독하며 스크롤하지 않는다.
+    if ((target - current).abs() > 2) {
+      _controller.jumpToPage(target);
+      return;
+    }
     _controller.animateToPage(
-      _pageOfYm(ym),
+      target,
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOut,
     );
@@ -205,10 +215,81 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   }
 }
 
-class _DbErrorView extends StatelessWidget {
+class _DbErrorView extends ConsumerStatefulWidget {
   const _DbErrorView({required this.error});
 
   final Object error;
+
+  @override
+  ConsumerState<_DbErrorView> createState() => _DbErrorViewState();
+}
+
+class _DbErrorViewState extends ConsumerState<_DbErrorView> {
+  bool _busy = false;
+
+  Object get error => widget.error;
+
+  void _retry() => ref.invalidate(databaseProvider);
+
+  /// 열리지 않는 DB 파일을 옆으로 치워 두고(삭제 안 함) 새 DB 로 시작한 뒤
+  /// 최근 자동 스냅샷을 병합한다 — 기록 파일이 깨졌을 때의 마지막 구조 경로.
+  Future<void> _rescue() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('기록 복구'),
+        content: const Text(
+          '열리지 않는 기록 파일을 지우지 않고 옆으로 치워 둔 뒤, '
+          '새로 시작해서 최근 자동 백업(스냅샷)을 합칩니다.\n'
+          '치워 둔 파일은 기기 안에 그대로 남아요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('복구 시작'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    setState(() => _busy = true);
+    String message;
+    try {
+      await quarantineDatabaseFiles(await appDatabaseDirectory());
+      ref.invalidate(databaseProvider);
+      final db = ref.read(databaseProvider);
+      final snapshots = ref.read(snapshotServiceProvider);
+      final list = await snapshots.list();
+      if (list.isEmpty) {
+        message = '새 기록으로 시작했어요. 되살릴 자동 백업은 없었습니다.';
+      } else {
+        final result = await snapshots.restore(db, list.first);
+        message =
+            '최근 자동 백업(${list.first.dateKey})에서 '
+            '${result.inserted}건을 되살렸어요.';
+      }
+    } catch (e) {
+      message = '복구하지 못했어요. 백업 텍스트나 파일이 있다면 설정 → 백업 / 복원에서 붙여넣어 주세요.';
+    }
+    if (!mounted) return;
+    setState(() => _busy = false);
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('확인'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -241,6 +322,20 @@ class _DbErrorView extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, color: scheme.onSurfaceVariant),
             ),
+            if (!isDowngrade) ...[
+              const SizedBox(height: 24),
+              FilledButton(
+                key: const ValueKey('db-retry'),
+                onPressed: _busy ? null : _retry,
+                child: const Text('다시 시도'),
+              ),
+              const SizedBox(height: 8),
+              OutlinedButton(
+                key: const ValueKey('db-rescue'),
+                onPressed: _busy ? null : _rescue,
+                child: const Text('기록 복구 (자동 백업에서 되살리기)'),
+              ),
+            ],
           ],
         ),
       ),

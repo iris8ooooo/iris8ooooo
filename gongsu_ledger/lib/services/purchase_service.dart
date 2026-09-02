@@ -1,5 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform;
+
 import 'package:in_app_purchase/in_app_purchase.dart';
 
 import '../domain/pro_limits.dart';
@@ -25,6 +28,15 @@ enum PurchaseOutcome {
 /// 스토어 결제 추상화. 위젯 코드는 in_app_purchase 를 직접 부르지 않는다
 /// (M4 규칙과 같은 이유 — 테스트는 가짜 주입).
 abstract class PurchaseService {
+  /// 결제/복원이 확인됐을 때 스토어에 "처리 완료"를 알리기 **전에** 호출되는
+  /// 잠금 해제 저장 콜백. 앱 시작 시 PurchaseSyncer 가 등록한다 — 페이월 화면이
+  /// 닫혀 있어도 구매가 유실되지 않게.
+  set entitlementHandler(Future<void> Function()? handler);
+
+  /// 앱 시작 시 한 번: 이전에 처리 못 한 구매(앱이 죽었거나 승인 대기가 끝난
+  /// 경우)를 조용히 찾아 잠금 해제한다. iOS 는 스토어 로그인 창이 뜨므로 하지 않는다.
+  Future<void> reconcileAtStartup();
+
   /// 스토어 연결 가능 여부 (시뮬레이터·스토어 미로그인이면 false).
   Future<bool> isAvailable();
 
@@ -57,6 +69,23 @@ class InAppPurchaseService implements PurchaseService {
   final _controller = StreamController<PurchaseOutcome>.broadcast();
   StreamSubscription<List<PurchaseDetails>>? _sub;
   ProductDetails? _product;
+  Future<void> Function()? _entitlementHandler;
+
+  @override
+  set entitlementHandler(Future<void> Function()? handler) =>
+      _entitlementHandler = handler;
+
+  @override
+  Future<void> reconcileAtStartup() async {
+    // Android: 미확인(unacknowledged) 구매는 3일 뒤 자동 환불된다 — 시작 시
+    // 조용히 조회해 잠금 해제 + 확인 처리. iOS 는 restore 가 로그인 창을 띄운다.
+    if (defaultTargetPlatform != TargetPlatform.android) return;
+    try {
+      if (await InAppPurchase.instance.isAvailable()) {
+        await InAppPurchase.instance.restorePurchases();
+      }
+    } catch (_) {}
+  }
 
   @override
   Stream<PurchaseOutcome> get outcomes => _controller.stream;
@@ -110,6 +139,19 @@ class InAppPurchaseService implements PurchaseService {
   Future<void> _onPurchases(List<PurchaseDetails> purchases) async {
     for (final p in purchases) {
       if (p.productID != proProductId) continue;
+      final entitled =
+          p.status == PurchaseStatus.purchased ||
+          p.status == PurchaseStatus.restored;
+      if (entitled) {
+        // 잠금 해제 저장이 실패하면 완료 처리도 하지 않는다 — 스토어가 다음
+        // 실행에 다시 전달하므로 결제가 유실되지 않는다.
+        try {
+          await _entitlementHandler?.call();
+        } catch (_) {
+          _controller.add(PurchaseOutcome.error);
+          continue;
+        }
+      }
       switch (p.status) {
         case PurchaseStatus.purchased:
           _controller.add(PurchaseOutcome.purchased);

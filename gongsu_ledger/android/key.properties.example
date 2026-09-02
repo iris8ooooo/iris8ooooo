@@ -3,4 +3,5 @@
 storePassword=여기에_키스토어_비밀번호
 keyPassword=여기에_키_비밀번호
 keyAlias=upload
+# android/ 폴더 기준 경로 (RELEASE_GUIDE 대로 android/ 에 만들었으면 그대로)
 storeFile=upload-keystore.jks

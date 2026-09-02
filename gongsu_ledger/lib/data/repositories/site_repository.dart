@@ -26,31 +26,38 @@ class SiteRepository {
     TaxOptions taxOptions = TaxOptions.defaults,
   }) async {
     _validateSite(name, colorId);
-    final existing = await _dao.getActive();
-    final nextOrder = existing.isEmpty
-        ? 0
-        : existing.map((s) => s.sortOrder).reduce((a, b) => a > b ? a : b) + 1;
-    final now = _now;
-    final siteId = await _dao.insertSite(
-      SitesCompanion.insert(
-        uid: generateUid(),
-        name: name.trim(),
-        colorId: Value(colorId),
-        sortOrder: nextOrder,
-        createdAtMillis: now,
-        updatedAtMillis: now,
-        taxMode: Value(taxMode.code),
-        taxOptionsJson: Value(taxOptions.toJsonString()),
-      ),
-    );
     if (dailyRateWon != null) {
-      await setRate(
-        siteId: siteId,
-        effectiveFromDateKey: initialRateEffectiveFromDateKey,
-        dailyRateWon: dailyRateWon,
-      );
+      _validateRate(initialRateEffectiveFromDateKey, dailyRateWon);
     }
-    return siteId;
+    // 업체 행과 첫 단가 이력을 한 트랜잭션으로 — 단가 없는 반쪽 업체가 남지 않는다.
+    return _dao.transaction(() async {
+      final existing = await _dao.getActive();
+      final nextOrder = existing.isEmpty
+          ? 0
+          : existing.map((s) => s.sortOrder).reduce((a, b) => a > b ? a : b) +
+                1;
+      final now = _now;
+      final siteId = await _dao.insertSite(
+        SitesCompanion.insert(
+          uid: generateUid(),
+          name: name.trim(),
+          colorId: Value(colorId),
+          sortOrder: nextOrder,
+          createdAtMillis: now,
+          updatedAtMillis: now,
+          taxMode: Value(taxMode.code),
+          taxOptionsJson: Value(taxOptions.toJsonString()),
+        ),
+      );
+      if (dailyRateWon != null) {
+        await setRate(
+          siteId: siteId,
+          effectiveFromDateKey: initialRateEffectiveFromDateKey,
+          dailyRateWon: dailyRateWon,
+        );
+      }
+      return siteId;
+    });
   }
 
   Future<void> update({

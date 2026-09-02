@@ -26,11 +26,13 @@ String decodeBackupText(String text) {
   if (start < 0) {
     throw BackupFormatError('공수장부 백업 텍스트(GSJB1:)가 아님');
   }
+  // 메신저·키보드가 끼워 넣는 공백/줄바꿈/보이지 않는 문자(U+200B 등)를 전부
+  // 걷어내고, 잘린 '=' 패딩은 normalize 로 되살린다.
   final body = trimmed
       .substring(start + backupTextPrefix.length)
-      .replaceAll(RegExp(r'\s'), '');
+      .replaceAll(RegExp(r'[^A-Za-z0-9+/=_-]'), '');
   try {
-    final compressed = base64Decode(body);
+    final compressed = base64Decode(base64.normalize(body));
     return utf8.decode(gzip.decode(compressed));
   } on FormatException {
     // base64 오류와 gzip 오류(dart:io는 FormatException) 모두 여기로.

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../common/choice_chip_row.dart';
+import '../pro/pro_gate.dart';
+import '../../state/pro_providers.dart';
+import '../../domain/pro_limits.dart';
+
 import '../../data/db/app_database.dart';
 import '../../data/repositories/site_repository.dart';
 import '../../domain/date_key.dart';
@@ -60,6 +65,14 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
 
   Future<void> _save() async {
     final repo = ref.read(siteRepoProvider);
+    if (widget.site == null) {
+      // 목록 화면을 거치지 않고 왔더라도 무료 티어 상한을 다시 확인한다.
+      final active = ref.read(sitesProvider).valueOrNull?.length ?? 0;
+      if (!canAddSite(activeSites: active, isPro: ref.read(proProvider))) {
+        final ok = await ensurePro(context, ref, feature: ProFeature.sites);
+        if (!ok || !mounted) return;
+      }
+    }
     try {
       if (widget.site == null) {
         await repo.create(
@@ -456,14 +469,12 @@ class _TaxSection extends StatelessWidget {
           style: TextStyle(color: scheme.onSurfaceVariant),
         ),
         const SizedBox(height: 8),
-        SegmentedButton<TaxMode>(
+        ChoiceChipRow<TaxMode>(
           key: const ValueKey('tax-mode'),
-          segments: [
-            for (final m in TaxMode.values)
-              ButtonSegment(value: m, label: Text(m.label)),
-          ],
-          selected: {mode},
-          onSelectionChanged: (s) => onModeChanged(s.first),
+          options: TaxMode.values,
+          selected: mode,
+          labelOf: (m) => m.label,
+          onSelected: onModeChanged,
         ),
         const SizedBox(height: 6),
         Text(
@@ -488,16 +499,13 @@ class _TaxSection extends StatelessWidget {
               style: TextStyle(color: scheme.onSurfaceVariant),
             ),
           ),
-          SegmentedButton<int>(
+          ChoiceChipRow<int>(
             key: const ValueKey('tax-min-days'),
-            segments: const [
-              ButtonSegment(value: 8, label: Text('월 8일 이상 근무')),
-              ButtonSegment(value: 0, label: Text('항상 적용')),
-            ],
-            selected: {options.pensionHealthMinDays == 0 ? 0 : 8},
-            onSelectionChanged: (s) => onOptionsChanged(
-              options.copyWith(pensionHealthMinDays: s.first),
-            ),
+            options: const [8, 0],
+            selected: options.pensionHealthMinDays == 0 ? 0 : 8,
+            labelOf: (v) => v == 0 ? '항상 적용' : '월 8일 이상 근무',
+            onSelected: (v) =>
+                onOptionsChanged(options.copyWith(pensionHealthMinDays: v)),
           ),
         ],
       ],

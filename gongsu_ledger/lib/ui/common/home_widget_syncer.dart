@@ -5,7 +5,9 @@ import '../../domain/date_key.dart';
 import '../../domain/month_grid.dart';
 import '../../domain/settlement.dart';
 import '../../domain/widget_payload.dart';
+import '../../state/calendar_providers.dart';
 import '../../state/pro_providers.dart';
+import '../../state/site_providers.dart';
 import '../../state/tax_providers.dart';
 import '../../state/widget_providers.dart';
 
@@ -85,10 +87,22 @@ class _HomeWidgetSyncerState extends ConsumerState<HomeWidgetSyncer>
 
   @override
   Widget build(BuildContext context) {
-    _maybePush(
-      ref.watch(monthSettlementProvider(_ym)),
-      isPro: ref.watch(proProvider),
-    );
+    // 데이터가 다 도착하기 전(로딩 중 = 빈 정산)이나 DB 오류 때는 보내지 않는다 —
+    // 위젯에 "0 공수"가 번쩍이거나 오류 상태가 홈 화면에 남지 않도록.
+    final entries = ref.watch(monthEntriesProvider(_ym));
+    final rates = ref.watch(allRatesProvider);
+    final sites = ref.watch(allSitesProvider);
+    final ready =
+        entries.hasValue &&
+        !entries.hasError &&
+        rates.hasValue &&
+        sites.hasValue;
+    if (ready) {
+      _maybePush(
+        ref.watch(monthSettlementProvider(_ym)),
+        isPro: ref.watch(proProvider),
+      );
+    }
     return widget.child;
   }
 }

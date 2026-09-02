@@ -32,8 +32,21 @@ runner.build_configurations.each do |c|
   c.build_settings['CODE_SIGN_ENTITLEMENTS'] = 'Runner/Runner.entitlements'
 end
 
+# iPhone 전용 — iPad 심사(2.1)에서 큰글씨 레이아웃 문제를 피한다. iPad 지원은 별도 결정.
+runner.build_configurations.each { |c| c.build_settings['TARGETED_DEVICE_FAMILY'] = '1' }
+
+def configure_widget_configs(project, widget)
+  group = project.main_group[WIDGET] || project.main_group.new_group(WIDGET, WIDGET)
+  xcconfig = group.files.find { |f| f.path == "#{WIDGET}.xcconfig" } || group.new_file("#{WIDGET}.xcconfig")
+  widget.build_configurations.each do |c|
+    c.base_configuration_reference = xcconfig
+    c.build_settings['TARGETED_DEVICE_FAMILY'] = '1'
+  end
+end
+
 if project.targets.any? { |t| t.name == WIDGET }
-  puts "#{WIDGET} 타깃이 이미 있습니다 — 건너뜀"
+  configure_widget_configs(project, project.targets.find { |t| t.name == WIDGET })
+  puts "#{WIDGET} 타깃이 이미 있습니다 — 설정만 갱신"
 else
   # 2. 확장 타깃
   widget = project.new_target(:app_extension, WIDGET, :ios, DEPLOYMENT_TARGET)
@@ -58,9 +71,6 @@ else
   # pbxproj 에 남기지 않기 위해 명시 링크는 하지 않는다.
 
   widget.build_configurations.each do |c|
-    runner_config = runner.build_configurations.find { |rc| rc.name == c.name }
-    # Flutter 의 Generated.xcconfig(빌드 번호·버전)를 앱과 똑같이 물려받는다.
-    c.base_configuration_reference = runner_config.base_configuration_reference if runner_config
     s = c.build_settings
     s['PRODUCT_BUNDLE_IDENTIFIER'] = BUNDLE_ID
     s['PRODUCT_NAME'] = '$(TARGET_NAME)'
@@ -73,7 +83,7 @@ else
     s['MARKETING_VERSION'] = '$(FLUTTER_BUILD_NAME)'
     s['IPHONEOS_DEPLOYMENT_TARGET'] = DEPLOYMENT_TARGET
     s['SWIFT_VERSION'] = '5.0'
-    s['TARGETED_DEVICE_FAMILY'] = '1,2'
+    s['TARGETED_DEVICE_FAMILY'] = '1'
     s['SKIP_INSTALL'] = 'YES'
     s['LD_RUNPATH_SEARCH_PATHS'] = ['$(inherited)', '@executable_path/Frameworks', '@executable_path/../../Frameworks']
     s['SWIFT_EMIT_LOC_STRINGS'] = 'YES'
@@ -92,6 +102,7 @@ else
   embed.dst_path = ''
   build_file = embed.add_file_reference(widget.product_reference)
   build_file.settings = { 'ATTRIBUTES' => ['RemoveHeadersOnCopy'] }
+  configure_widget_configs(project, widget)
   puts "#{WIDGET} 타깃 추가"
 end
 

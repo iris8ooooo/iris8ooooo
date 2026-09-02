@@ -84,14 +84,19 @@ List<SettlementItem> _settlementItems(Iterable<DayExtraItem> rows) => [
     ),
 ];
 
-/// 세율 테이블 조회 함수 — 정산 함수에 넘긴다. 기간의 종료 연도 하나만
-/// 구독한다 (정산 함수가 종료일 연도로 계산하므로).
-TaxRateTable Function(int) _ratesResolver(Ref ref, int year) {
-  final table =
-      ref.watch(taxRatesProvider(year)).valueOrNull ??
-      defaultTaxRateTable(year);
-  return (_) => table;
+/// 세율 테이블 조회 함수 — 정산 함수에 넘긴다. 기간이 걸친 연도를 전부
+/// 구독한다 (4대보험은 달별로 그 달의 연도 요율을 쓴다).
+TaxRateTable Function(int) _ratesResolver(Ref ref, Iterable<int> years) {
+  final tables = {
+    for (final y in years.toSet())
+      y: ref.watch(taxRatesProvider(y)).valueOrNull ?? defaultTaxRateTable(y),
+  };
+  return (y) => tables[y] ?? defaultTaxRateTable(y);
 }
+
+/// 기간이 걸친 달 전체를 덮는 키 — 4대보험 "월 8일" 판정용 문맥 조회.
+int _monthCoveringKey(int fromKey, int toKey) =>
+    periodKey((fromKey ~/ 100) * 100 + 1, (toKey ~/ 100) * 100 + 31);
 
 /// 달력에 보이는 달의 정산 — 월 카드 세후 실수령. 월 쿼리(monthEntries/
 /// monthExtraItems)를 그대로 재사용해 추가 쿼리가 없다.
@@ -113,7 +118,7 @@ final monthSettlementProvider = Provider.autoDispose
         items: _settlementItems(itemsByDay.values.expand((l) => l)),
         histories: _rateEntries(rates),
         taxBySite: ref.watch(taxBySiteProvider),
-        ratesForYear: _ratesResolver(ref, yearOfYm(ym)),
+        ratesForYear: _ratesResolver(ref, [yearOfYm(ym)]),
         rounding:
             ref.watch(taxRoundingProvider).valueOrNull ?? TaxRounding.floor10,
       );
@@ -156,7 +161,11 @@ final periodSettlementProvider = Provider.autoDispose
     .family<PeriodSettlement?, int>((ref, key) {
       final fromKey = periodFromKey(key);
       final toKey = periodToKey(key);
-      final entries = ref.watch(rangeEntriesProvider(key)).valueOrNull;
+      // 기간이 걸친 달 전체를 읽는다 — 기간 밖 행은 정산 함수가 월 근무일
+      // 판정에만 쓰고 금액에는 넣지 않는다.
+      final entries = ref
+          .watch(rangeEntriesProvider(_monthCoveringKey(fromKey, toKey)))
+          .valueOrNull;
       final items = ref.watch(rangeItemsProvider(key)).valueOrNull;
       if (entries == null || items == null) return null; // 로딩 중
       final rates =
@@ -168,7 +177,7 @@ final periodSettlementProvider = Provider.autoDispose
         items: _settlementItems(items),
         histories: _rateEntries(rates),
         taxBySite: ref.watch(taxBySiteProvider),
-        ratesForYear: _ratesResolver(ref, toKey ~/ 10000),
+        ratesForYear: _ratesResolver(ref, [fromKey ~/ 10000, toKey ~/ 10000]),
         rounding:
             ref.watch(taxRoundingProvider).valueOrNull ?? TaxRounding.floor10,
       );
@@ -191,7 +200,7 @@ final yearStatsProvider = Provider.autoDispose.family<YearStats?, int>((
     items: _settlementItems(items),
     histories: _rateEntries(rates),
     taxBySite: ref.watch(taxBySiteProvider),
-    ratesForYear: _ratesResolver(ref, year),
+    ratesForYear: _ratesResolver(ref, [year]),
     rounding: ref.watch(taxRoundingProvider).valueOrNull ?? TaxRounding.floor10,
   );
 });

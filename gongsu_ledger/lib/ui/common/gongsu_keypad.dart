@@ -158,11 +158,14 @@ class _GongsuKeypadState extends State<GongsuKeypad> {
                           onPressed: key == '⌫'
                               ? _backspace
                               : () => _append(key),
-                          child: Text(
-                            key,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w600,
+                          child: Semantics(
+                            label: key == '⌫' ? '지우기' : null,
+                            child: Text(
+                              key,
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ),

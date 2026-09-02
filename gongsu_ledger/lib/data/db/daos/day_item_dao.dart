@@ -43,6 +43,13 @@ class DayItemDao extends DatabaseAccessor<AppDatabase> with _$DayItemDaoMixin {
             ]))
           .get();
 
+  /// 삭제된(soft delete) 부가항목 — '삭제된 기록' 화면용.
+  Stream<List<DayExtraItem>> watchDeleted() =>
+      (select(dayExtraItems)
+            ..where((t) => t.deletedAtMillis.isNotNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.deletedAtMillis)]))
+          .watch();
+
   Future<int> insertItem(DayExtraItemsCompanion item) =>
       into(dayExtraItems).insert(item);
 

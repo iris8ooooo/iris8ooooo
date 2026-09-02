@@ -50,27 +50,65 @@ class ImportResult {
 }
 
 /// yyyyMMdd 정수가 그럴듯한 날짜인지 검사 (2000~2100년).
+/// 실제 달력에 있는 날짜인지 (2월 30일 같은 값은 거른다).
 bool _isPlausibleDateKey(int key) {
   final year = key ~/ 10000;
   final month = (key % 10000) ~/ 100;
   final day = key % 100;
-  return year >= 2000 &&
-      year <= 2100 &&
-      month >= 1 &&
-      month <= 12 &&
-      day >= 1 &&
-      day <= 31;
+  if (year < 2000 || year > 2100 || month < 1 || month > 12 || day < 1) {
+    return false;
+  }
+  return day <= DateTime(year, month + 1, 0).day;
 }
+
+/// 백업 봉투에 함께 실리는 설정 키 — 실수령·PDF 결과를 바꾸는 사용자 입력만.
+/// 기기 고유 설정(화면·프로·온보딩·마지막 업체)은 제외.
+const List<String> backupSettingKeys = [
+  'report_worker_name',
+  'tax_rounding',
+  'settle_cycle_start_day',
+  'job_kind',
+];
+const String backupSettingPrefix = 'tax_rates_override_';
+
+bool _isBackupSettingKey(String key) =>
+    backupSettingKeys.contains(key) || key.startsWith(backupSettingPrefix);
+
+String? _asString(Object? v) => v == null ? null : (v is String ? v : '$v');
+
+bool? _asBool(Object? v) => switch (v) {
+  bool b => b,
+  int i => i != 0,
+  String s => s == 'true' || s == '1',
+  _ => null,
+};
+
+/// 열 길이 제한(최대 [max]자)에 맞춰 자른다 — 다른 버전이 만든 긴 값 때문에
+/// 백업 전체가 거부되지 않도록.
+String _clip(String s, int max) => s.length <= max ? s : s.substring(0, max);
 
 Future<String> exportBackupJson(AppDatabase db) async {
   // 백업은 삭제 행 포함이 명세 — DAO의 alive 필터를 일부러 거치지 않는
   // 유일한 읽기 경로다.
-  final entries = await db.select(db.workEntries).get();
-  final presets = await db.select(db.presets).get();
-  final memos = await db.select(db.dayMemos).get();
-  final sites = await db.select(db.sites).get();
-  final rates = await db.select(db.siteRateHistories).get();
-  final items = await db.select(db.dayExtraItems).get();
+  // 한 트랜잭션 안에서 읽어 테이블 간 일관성을 보장한다 (업체는 있는데
+  // 이력이 없는 반쪽 스냅샷 방지).
+  final snapshot = await db.transaction(() async {
+    return (
+      entries: await db.select(db.workEntries).get(),
+      presets: await db.select(db.presets).get(),
+      memos: await db.select(db.dayMemos).get(),
+      sites: await db.select(db.sites).get(),
+      rates: await db.select(db.siteRateHistories).get(),
+      items: await db.select(db.dayExtraItems).get(),
+      settings: await db.select(db.appSettings).get(),
+    );
+  });
+  final entries = snapshot.entries;
+  final presets = snapshot.presets;
+  final memos = snapshot.memos;
+  final sites = snapshot.sites;
+  final rates = snapshot.rates;
+  final items = snapshot.items;
   final presetUidById = {for (final p in presets) p.id: p.uid};
   final siteUidById = {for (final s in sites) s.id: s.uid};
 
@@ -156,6 +194,10 @@ Future<String> exportBackupJson(AppDatabase db) async {
           'deletedAtMillis': it.deletedAtMillis,
         },
     ],
+    'appSettings': [
+      for (final st in snapshot.settings)
+        if (_isBackupSettingKey(st.key)) {'key': st.key, 'value': st.value},
+    ],
   });
 }
 
@@ -184,40 +226,45 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
   await db.transaction(() async {
     // ── 업체 (기록/이력/항목이 참조하므로 가장 먼저) ──────────────
     for (final row in _rows(decoded['sites'])) {
-      final uid = _uid(row);
-      if (uid == null) {
-        skipped++;
-        continue;
-      }
-      final name = row['name'] as String? ?? '';
-      if (name.isEmpty) {
-        skipped++;
-        continue;
-      }
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.sites,
-      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
-      final companion = SitesCompanion(
-        uid: Value(uid),
-        name: Value(name),
-        colorId: Value(_asInt(row['colorId']) ?? 0),
-        sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
-        isArchived: Value(row['isArchived'] as bool? ?? false),
-        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
-        updatedAtMillis: Value(incomingUpdatedAt),
-        // v2 백업에는 없는 키 — 기본 'none'. 모르는 코드도 'none'으로.
-        taxMode: Value(TaxMode.fromCode(row['taxMode'] as String?).code),
-        taxOptionsJson: Value(row['taxOptionsJson'] as String?),
-      );
-      if (existing == null) {
-        await db.into(db.sites).insert(companion);
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(
+      try {
+        final uid = _uid(row);
+        if (uid == null) {
+          skipped++;
+          continue;
+        }
+        final name = _clip(_asString(row['name']) ?? '', 30);
+        if (name.isEmpty) {
+          skipped++;
+          continue;
+        }
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.sites,
-        )..where((t) => t.uid.equals(uid))).write(companion);
-        updated++;
+        )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+        final companion = SitesCompanion(
+          uid: Value(uid),
+          name: Value(name),
+          colorId: Value(_asInt(row['colorId']) ?? 0),
+          sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
+          isArchived: Value(_asBool(row['isArchived']) ?? false),
+          createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+          updatedAtMillis: Value(incomingUpdatedAt),
+          // v2 백업에는 없는 키 — 기본 'none'. 모르는 코드도 'none'으로.
+          taxMode: Value(TaxMode.fromCode(_asString(row['taxMode'])).code),
+          taxOptionsJson: Value(_asString(row['taxOptionsJson'])),
+        );
+        if (existing == null) {
+          await db.into(db.sites).insert(companion);
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          await (db.update(
+            db.sites,
+          )..where((t) => t.uid.equals(uid))).write(companion);
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
       }
     }
     final siteRows = await db.select(db.sites).get();
@@ -225,39 +272,44 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
 
     // ── 프리셋 ───────────────────────────────────────────────
     for (final row in _rows(decoded['presets'])) {
-      final uid = _uid(row);
-      if (uid == null) {
-        skipped++;
-        continue;
-      }
-      final presetCenti = _asInt(row['centiGongsu']);
-      final presetName = row['name'] as String? ?? '';
-      if (presetCenti == null || presetCenti < 0 || presetName.isEmpty) {
-        skipped++;
-        continue;
-      }
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.presets,
-      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
-      final companion = PresetsCompanion(
-        uid: Value(uid),
-        name: Value(presetName),
-        centiGongsu: Value(presetCenti),
-        colorId: Value(_asInt(row['colorId']) ?? 0),
-        sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
-        isArchived: Value(row['isArchived'] as bool? ?? false),
-        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
-        updatedAtMillis: Value(incomingUpdatedAt),
-      );
-      if (existing == null) {
-        await db.into(db.presets).insert(companion);
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(
+      try {
+        final uid = _uid(row);
+        if (uid == null) {
+          skipped++;
+          continue;
+        }
+        final presetCenti = _asInt(row['centiGongsu']);
+        final presetName = _clip(_asString(row['name']) ?? '', 30);
+        if (presetCenti == null || presetCenti < 0 || presetName.isEmpty) {
+          skipped++;
+          continue;
+        }
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.presets,
-        )..where((t) => t.uid.equals(uid))).write(companion);
-        updated++;
+        )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+        final companion = PresetsCompanion(
+          uid: Value(uid),
+          name: Value(presetName),
+          centiGongsu: Value(presetCenti),
+          colorId: Value(_asInt(row['colorId']) ?? 0),
+          sortOrder: Value(_asInt(row['sortOrder']) ?? 0),
+          isArchived: Value(_asBool(row['isArchived']) ?? false),
+          createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+          updatedAtMillis: Value(incomingUpdatedAt),
+        );
+        if (existing == null) {
+          await db.into(db.presets).insert(companion);
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          await (db.update(
+            db.presets,
+          )..where((t) => t.uid.equals(uid))).write(companion);
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
       }
     }
     final presetRows = await db.select(db.presets).get();
@@ -265,174 +317,220 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
 
     // ── 기록 ─────────────────────────────────────────────────
     for (final row in _rows(decoded['workEntries'])) {
-      final uid = _uid(row);
-      if (uid == null) {
-        skipped++;
-        continue;
-      }
-      final dateKey = _asInt(row['dateKey']);
-      final centiGongsu = _asInt(row['centiGongsu']);
-      final override = _asInt(row['unitRateWonOverride']);
-      if (dateKey == null ||
-          !_isPlausibleDateKey(dateKey) ||
-          centiGongsu == null ||
-          centiGongsu < 0 ||
-          (override != null && override < 0)) {
-        skipped++;
-        continue;
-      }
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.workEntries,
-      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
-      final presetUid = row['presetUid'];
-      final siteUid = row['siteUid'];
-      final companion = WorkEntriesCompanion(
-        uid: Value(uid),
-        dateKey: Value(dateKey),
-        centiGongsu: Value(centiGongsu),
-        presetId: Value(presetUid is String ? presetIdByUid[presetUid] : null),
-        labelSnapshot: Value(row['labelSnapshot'] as String? ?? ''),
-        colorIdSnapshot: Value(_asInt(row['colorIdSnapshot']) ?? 0),
-        siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
-        unitRateWonOverride: Value(override),
-        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
-        updatedAtMillis: Value(incomingUpdatedAt),
-        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
-      );
-      if (existing == null) {
-        await db.into(db.workEntries).insert(companion);
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(
+      try {
+        final uid = _uid(row);
+        if (uid == null) {
+          skipped++;
+          continue;
+        }
+        final dateKey = _asInt(row['dateKey']);
+        final centiGongsu = _asInt(row['centiGongsu']);
+        final override = _asInt(row['unitRateWonOverride']);
+        if (dateKey == null ||
+            !_isPlausibleDateKey(dateKey) ||
+            centiGongsu == null ||
+            centiGongsu < 0 ||
+            (override != null && override < 0)) {
+          skipped++;
+          continue;
+        }
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.workEntries,
-        )..where((t) => t.uid.equals(uid))).write(companion);
-        updated++;
+        )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+        final presetUid = row['presetUid'];
+        final siteUid = row['siteUid'];
+        final companion = WorkEntriesCompanion(
+          uid: Value(uid),
+          dateKey: Value(dateKey),
+          centiGongsu: Value(centiGongsu),
+          presetId: Value(
+            presetUid is String ? presetIdByUid[presetUid] : null,
+          ),
+          labelSnapshot: Value(
+            _clip(_asString(row['labelSnapshot']) ?? '', 20),
+          ),
+          colorIdSnapshot: Value(_asInt(row['colorIdSnapshot']) ?? 0),
+          siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
+          unitRateWonOverride: Value(override),
+          createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+          updatedAtMillis: Value(incomingUpdatedAt),
+          deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+        );
+        if (existing == null) {
+          await db.into(db.workEntries).insert(companion);
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          await (db.update(
+            db.workEntries,
+          )..where((t) => t.uid.equals(uid))).write(companion);
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
       }
     }
 
     // ── 단가 이력 (업체 uid가 반드시 풀려야 한다) ─────────────────
     for (final row in _rows(decoded['siteRateHistories'])) {
-      final uid = _uid(row);
-      final siteUid = row['siteUid'];
-      final siteId = siteUid is String ? siteIdByUid[siteUid] : null;
-      final effectiveFrom = _asInt(row['effectiveFromDateKey']);
-      final rate = _asInt(row['dailyRateWon']);
-      if (uid == null ||
-          siteId == null ||
-          effectiveFrom == null ||
-          !_isPlausibleDateKey(effectiveFrom) ||
-          rate == null ||
-          rate < 0) {
-        skipped++;
-        continue;
-      }
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.siteRateHistories,
-      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
-      final companion = SiteRateHistoriesCompanion(
-        uid: Value(uid),
-        siteId: Value(siteId),
-        effectiveFromDateKey: Value(effectiveFrom),
-        dailyRateWon: Value(rate),
-        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
-        updatedAtMillis: Value(incomingUpdatedAt),
-        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
-      );
-      if (existing == null) {
-        await db.into(db.siteRateHistories).insert(companion);
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(
+      try {
+        final uid = _uid(row);
+        final siteUid = row['siteUid'];
+        final siteId = siteUid is String ? siteIdByUid[siteUid] : null;
+        final effectiveFrom = _asInt(row['effectiveFromDateKey']);
+        final rate = _asInt(row['dailyRateWon']);
+        if (uid == null ||
+            siteId == null ||
+            effectiveFrom == null ||
+            !_isPlausibleDateKey(effectiveFrom) ||
+            rate == null ||
+            rate < 0) {
+          skipped++;
+          continue;
+        }
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.siteRateHistories,
-        )..where((t) => t.uid.equals(uid))).write(companion);
-        updated++;
+        )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+        final companion = SiteRateHistoriesCompanion(
+          uid: Value(uid),
+          siteId: Value(siteId),
+          effectiveFromDateKey: Value(effectiveFrom),
+          dailyRateWon: Value(rate),
+          createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+          updatedAtMillis: Value(incomingUpdatedAt),
+          deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+        );
+        if (existing == null) {
+          await db.into(db.siteRateHistories).insert(companion);
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          await (db.update(
+            db.siteRateHistories,
+          )..where((t) => t.uid.equals(uid))).write(companion);
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
       }
     }
 
     // ── 부가 항목 ─────────────────────────────────────────────
     for (final row in _rows(decoded['dayExtraItems'])) {
-      final uid = _uid(row);
-      final dateKey = _asInt(row['dateKey']);
-      final amount = _asInt(row['amountWon']);
-      final label = row['label'] as String? ?? '';
-      final kind = row['kind'] as String? ?? '';
-      final validKind = ExtraItemKind.values.any((k) => k.code == kind);
-      if (uid == null ||
-          dateKey == null ||
-          !_isPlausibleDateKey(dateKey) ||
-          amount == null ||
-          amount < 0 ||
-          label.isEmpty ||
-          !validKind) {
-        skipped++;
-        continue;
-      }
-      final siteUid = row['siteUid'];
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.dayExtraItems,
-      )..where((t) => t.uid.equals(uid))).getSingleOrNull();
-      final companion = DayExtraItemsCompanion(
-        uid: Value(uid),
-        dateKey: Value(dateKey),
-        siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
-        kind: Value(kind),
-        label: Value(label),
-        amountWon: Value(amount),
-        isTaxable: Value(row['isTaxable'] as bool? ?? false),
-        createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
-        updatedAtMillis: Value(incomingUpdatedAt),
-        deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
-      );
-      if (existing == null) {
-        await db.into(db.dayExtraItems).insert(companion);
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        await (db.update(
+      try {
+        final uid = _uid(row);
+        final dateKey = _asInt(row['dateKey']);
+        final amount = _asInt(row['amountWon']);
+        final label = _clip(_asString(row['label']) ?? '', 20);
+        final kind = _asString(row['kind']) ?? '';
+        final validKind = ExtraItemKind.values.any((k) => k.code == kind);
+        if (uid == null ||
+            dateKey == null ||
+            !_isPlausibleDateKey(dateKey) ||
+            amount == null ||
+            amount < 0 ||
+            label.isEmpty ||
+            !validKind) {
+          skipped++;
+          continue;
+        }
+        final siteUid = row['siteUid'];
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.dayExtraItems,
-        )..where((t) => t.uid.equals(uid))).write(companion);
-        updated++;
+        )..where((t) => t.uid.equals(uid))).getSingleOrNull();
+        final companion = DayExtraItemsCompanion(
+          uid: Value(uid),
+          dateKey: Value(dateKey),
+          siteId: Value(siteUid is String ? siteIdByUid[siteUid] : null),
+          kind: Value(kind),
+          label: Value(label),
+          amountWon: Value(amount),
+          isTaxable: Value(_asBool(row['isTaxable']) ?? false),
+          createdAtMillis: Value(_asInt(row['createdAtMillis']) ?? 0),
+          updatedAtMillis: Value(incomingUpdatedAt),
+          deletedAtMillis: Value(_asInt(row['deletedAtMillis'])),
+        );
+        if (existing == null) {
+          await db.into(db.dayExtraItems).insert(companion);
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          await (db.update(
+            db.dayExtraItems,
+          )..where((t) => t.uid.equals(uid))).write(companion);
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
       }
     }
 
     // ── 메모 ─────────────────────────────────────────────────
     for (final row in _rows(decoded['dayMemos'])) {
-      final dateKey = _asInt(row['dateKey']);
-      if (dateKey == null || !_isPlausibleDateKey(dateKey)) {
-        skipped++;
-        continue;
-      }
-      final body = row['body'] as String? ?? '';
-      final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
-      final existing = await (db.select(
-        db.dayMemos,
-      )..where((t) => t.dateKey.equals(dateKey))).getSingleOrNull();
-      if (existing == null) {
-        // 없는 날짜의 tombstone(빈 본문)까지 만들 필요는 없다.
-        if (body.isEmpty) continue;
-        await db
-            .into(db.dayMemos)
-            .insert(
-              DayMemosCompanion.insert(
-                dateKey: Value(dateKey),
-                body: body,
-                updatedAtMillis: incomingUpdatedAt,
-              ),
-            );
-        inserted++;
-      } else if (incomingUpdatedAt > existing.updatedAtMillis) {
-        // 빈 본문(tombstone)도 그대로 반영 — 삭제가 기기 간 전파된다.
-        await (db.update(
+      try {
+        final dateKey = _asInt(row['dateKey']);
+        if (dateKey == null || !_isPlausibleDateKey(dateKey)) {
+          skipped++;
+          continue;
+        }
+        final body = _asString(row['body']) ?? '';
+        final incomingUpdatedAt = _asInt(row['updatedAtMillis']) ?? 0;
+        final existing = await (db.select(
           db.dayMemos,
-        )..where((t) => t.dateKey.equals(dateKey))).write(
-          DayMemosCompanion(
-            body: Value(body),
-            updatedAtMillis: Value(incomingUpdatedAt),
-          ),
-        );
-        updated++;
+        )..where((t) => t.dateKey.equals(dateKey))).getSingleOrNull();
+        if (existing == null) {
+          // 없는 날짜의 tombstone(빈 본문)까지 만들 필요는 없다.
+          if (body.isEmpty) continue;
+          await db
+              .into(db.dayMemos)
+              .insert(
+                DayMemosCompanion.insert(
+                  dateKey: Value(dateKey),
+                  body: body,
+                  updatedAtMillis: incomingUpdatedAt,
+                ),
+              );
+          inserted++;
+        } else if (incomingUpdatedAt > existing.updatedAtMillis) {
+          // 빈 본문(tombstone)도 그대로 반영 — 삭제가 기기 간 전파된다.
+          await (db.update(
+            db.dayMemos,
+          )..where((t) => t.dateKey.equals(dateKey))).write(
+            DayMemosCompanion(
+              body: Value(body),
+              updatedAtMillis: Value(incomingUpdatedAt),
+            ),
+          );
+          updated++;
+        }
+      } catch (_) {
+        // 손상된 행 하나 때문에 백업 전체를 거부하지 않는다 — 건너뛰고 센다.
+        skipped++;
+      }
+    }
+
+    // ── 설정 (없을 때만 넣는다 — 병합 전용, 기존 기기 설정 우선) ────────
+    for (final row in _rows(decoded['appSettings'])) {
+      try {
+        final key = _asString(row['key']);
+        final value = _asString(row['value']);
+        if (key == null || value == null || !_isBackupSettingKey(key)) {
+          skipped++;
+          continue;
+        }
+        final existing = await (db.select(
+          db.appSettings,
+        )..where((t) => t.key.equals(key))).getSingleOrNull();
+        if (existing != null) continue;
+        await db
+            .into(db.appSettings)
+            .insert(AppSettingsCompanion.insert(key: key, value: value));
+        inserted++;
+      } catch (_) {
+        skipped++;
       }
     }
   });

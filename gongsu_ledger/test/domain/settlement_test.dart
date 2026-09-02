@@ -156,10 +156,11 @@ void main() {
   });
 
   test('4대보험 업체가 7일만 일하면 연금·건강 없이 고용보험만', () {
+    // 달 전체 근무일이 판정 기준이므로 그 달의 다른 기록은 넘기지 않는다.
     final s = buildPeriodSettlement(
       fromKey: 20260901,
       toKey: 20260907,
-      entries: entries,
+      entries: entries.where((e) => e.dateKey <= 20260907),
       items: const [],
       histories: histories,
       taxBySite: taxBySite,
@@ -188,5 +189,92 @@ void main() {
     final a = s.sites.singleWhere((x) => x.siteId == 1);
     expect(a.centi, 600);
     expect(a.laborWon, 900000);
+  });
+
+  group('두 달에 걸친 기간의 4대보험은 달마다 따로 계산한다', () {
+    const rate = 400000;
+    const hist = <RateHistoryEntry>[
+      (siteId: 7, effectiveFromDateKey: 20000101, dailyRateWon: rate),
+    ];
+    const tax = <int, SiteTaxConfig>{
+      7: (
+        mode: TaxMode.insurance4,
+        options: TaxOptions(applyDailyIncomeTax: false),
+      ),
+    };
+    SettlementEntry e(int key) =>
+        (dateKey: key, centiGongsu: 100, siteId: 7, unitRateWonOverride: null);
+
+    test('마감 주기 8/21~9/20: 국민연금 상한을 달마다 적용 (한 덩어리로 자르지 않는다)', () {
+      // 8월 21~30일 10일 + 9월 1~10일 10일, 각 4,000,000원.
+      final entries = [
+        for (var d = 21; d <= 30; d++) e(20260800 + d),
+        for (var d = 1; d <= 10; d++) e(20260900 + d),
+      ];
+      final s = buildPeriodSettlement(
+        fromKey: 20260821,
+        toKey: 20260920,
+        entries: entries,
+        items: const [],
+        histories: hist,
+        taxBySite: tax,
+        ratesForYear: defaultTaxRateTable,
+        rounding: TaxRounding.floor10,
+      );
+      final site = s.sites.single;
+      expect(site.laborWon, 8000000);
+      // 달별 4,000,000 × 4.75% = 190,000 → 두 달 380,000
+      // (기간 합계 8,000,000에 상한 6,590,000을 한 번만 적용하면 313,020으로 틀림)
+      expect(site.tax.pensionWon, 380000);
+      expect(site.tax.healthWon, 287600); // 143,800 × 2
+    });
+
+    test('월 8일 판정은 기간 밖 같은 달 기록까지 센다', () {
+      // 정산 기간 9/1~9/20 안에는 5일뿐이지만 9/21~9/30에 4일 더 일했다.
+      final inPeriod = [for (var d = 1; d <= 5; d++) e(20260900 + d)];
+      final context = [for (var d = 21; d <= 24; d++) e(20260900 + d)];
+      final without = buildPeriodSettlement(
+        fromKey: 20260901,
+        toKey: 20260920,
+        entries: inPeriod,
+        items: const [],
+        histories: hist,
+        taxBySite: tax,
+        ratesForYear: defaultTaxRateTable,
+        rounding: TaxRounding.floor10,
+      );
+      expect(without.sites.single.tax.pensionWon, 0, reason: '5일 < 8일');
+
+      final withContext = buildPeriodSettlement(
+        fromKey: 20260901,
+        toKey: 20260920,
+        entries: [...inPeriod, ...context],
+        items: const [],
+        histories: hist,
+        taxBySite: tax,
+        ratesForYear: defaultTaxRateTable,
+        rounding: TaxRounding.floor10,
+      );
+      final site = withContext.sites.single;
+      expect(site.workedDays, 5, reason: '근무일·금액은 기간 안만');
+      expect(site.laborWon, 2000000);
+      expect(site.tax.pensionWon, 95000, reason: '9일 ≥ 8일 → 2,000,000 × 4.75%');
+      expect(withContext.totalCenti, 500);
+    });
+
+    test('기간 밖 기록만 있는 업체는 정산 목록에 나오지 않는다', () {
+      final s = buildPeriodSettlement(
+        fromKey: 20260901,
+        toKey: 20260920,
+        entries: [e(20260925)],
+        items: const [],
+        histories: hist,
+        taxBySite: tax,
+        ratesForYear: defaultTaxRateTable,
+        rounding: TaxRounding.floor10,
+      );
+      expect(s.sites, isEmpty);
+      expect(s.totalCenti, 0);
+    });
   });
 }
