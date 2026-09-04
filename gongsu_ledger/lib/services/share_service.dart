@@ -10,6 +10,8 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import '../data/backup/backup_codec.dart';
+
 abstract class ShareService {
   Future<void> shareText(String text, {String? subject});
 
@@ -44,6 +46,9 @@ class SharePlusService implements ShareService {
   }
 }
 
+/// 가져오기 파일 크기 상한. 백업 JSON은 수년치라도 수 MB 수준이다.
+const int maxBackupFileBytes = 20 * 1024 * 1024;
+
 abstract class BackupFileService {
   /// 사용자가 고른 백업 파일의 내용. 취소하면 null.
   Future<String?> pickBackupText();
@@ -55,6 +60,11 @@ class FilePickerBackupFileService implements BackupFileService {
     // file_picker 12: 취소 시 빈 목록. 내용은 readAsBytes로 읽는다.
     final files = await FilePicker.pickFiles();
     if (files.isEmpty) return null;
+    // 실수로 고른 동영상 같은 큰 파일을 통째로 읽다 죽지 않게.
+    final length = await files.first.length();
+    if (length > maxBackupFileBytes) {
+      throw BackupFormatError('백업 파일이 너무 큽니다 (20MB 초과)');
+    }
     final bytes = await files.first.readAsBytes();
     final text = utf8.decode(bytes, allowMalformed: true);
     // 일부 편집기가 붙이는 BOM 제거

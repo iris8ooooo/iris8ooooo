@@ -6,6 +6,7 @@ import '../../domain/appearance.dart';
 import '../../domain/pro_limits.dart';
 import '../../state/appearance_providers.dart';
 import '../../state/pro_providers.dart';
+import '../backup/trash_page.dart';
 import '../onboarding/onboarding_page.dart';
 import '../presets/preset_list_page.dart';
 import '../pro/paywall_page.dart';
@@ -107,6 +108,17 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const PaywallPage())),
+          ),
+          _SectionTitle('기록'),
+          ListTile(
+            key: const ValueKey('trash'),
+            leading: const Icon(Icons.restore_from_trash_outlined),
+            title: const Text('삭제된 기록 되살리기'),
+            subtitle: const Text('지운 공수·부가항목은 여기 남아 있어요'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () =>
+                Navigator.of(context)
+                    .push(MaterialPageRoute(builder: (_) => const TrashPage())),
           ),
           _SectionTitle('공수 버튼(프리셋)'),
           ListTile(

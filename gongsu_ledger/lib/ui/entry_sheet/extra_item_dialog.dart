@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../common/choice_chip_row.dart';
+
 import '../../data/repositories/day_item_repository.dart';
 import '../common/won_format.dart';
 
@@ -31,22 +33,21 @@ Future<ExtraItemInput?> showExtraItemDialog(BuildContext context) {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                SegmentedButton<ExtraItemKind>(
-                  segments: const [
-                    ButtonSegment(
-                      value: ExtraItemKind.allowance,
-                      label: Text('가산 (+)'),
-                      icon: Icon(Icons.add_circle_outline),
-                    ),
-                    ButtonSegment(
-                      value: ExtraItemKind.deduction,
-                      label: Text('공제 (−)'),
-                      icon: Icon(Icons.remove_circle_outline),
-                    ),
+                ChoiceChipRow<ExtraItemKind>(
+                  options: const [
+                    ExtraItemKind.allowance,
+                    ExtraItemKind.deduction,
                   ],
-                  selected: {kind},
-                  onSelectionChanged: (s) =>
-                      setDialogState(() => kind = s.first),
+                  selected: kind,
+                  labelOf: (k) =>
+                      k == ExtraItemKind.allowance ? '가산 (+)' : '공제 (−)',
+                  avatarOf: (k) => Icon(
+                    k == ExtraItemKind.allowance
+                        ? Icons.add_circle_outline
+                        : Icons.remove_circle_outline,
+                    size: 18,
+                  ),
+                  onSelected: (k) => setDialogState(() => kind = k),
                 ),
                 const SizedBox(height: 12),
                 Wrap(

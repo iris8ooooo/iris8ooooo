@@ -47,6 +47,18 @@ enum TaxRateKey {
     TaxRateFieldKind.won,
     '이보다 적어도 이 금액 기준으로 계산',
   ),
+  pensionMonthlyCapFromJuly(
+    'pensionMonthlyCapFromJulyWon',
+    '국민연금 기준소득 상한 (7월부터)',
+    TaxRateFieldKind.won,
+    '상·하한은 매년 7월 1일에 바뀐다. 7~12월 정산에 이 값을 쓴다',
+  ),
+  pensionMonthlyFloorFromJuly(
+    'pensionMonthlyFloorFromJulyWon',
+    '국민연금 기준소득 하한 (7월부터)',
+    TaxRateFieldKind.won,
+    '7~12월 정산에 쓰는 하한',
+  ),
   dailyTaxExempt(
     'dailyTaxExemptWon',
     '일용근로소득 일 공제액',
@@ -101,6 +113,8 @@ class TaxRateTable {
     required this.employmentEmployeePer100k,
     required this.pensionMonthlyCapWon,
     required this.pensionMonthlyFloorWon,
+    required this.pensionMonthlyCapFromJulyWon,
+    required this.pensionMonthlyFloorFromJulyWon,
     required this.dailyTaxExemptWon,
     required this.dailyIncomeTaxPer100k,
     required this.dailyTaxCreditPer100k,
@@ -114,9 +128,22 @@ class TaxRateTable {
   final int healthEmployeePer100k;
   final int longTermCarePer100kOfHealth;
   final int employmentEmployeePer100k;
+
+  /// 1~6월에 적용되는 기준소득월액 상·하한 (전년 7월 개정치).
   final int pensionMonthlyCapWon;
   final int pensionMonthlyFloorWon;
+
+  /// 7~12월에 적용되는 상·하한 (그해 7월 개정치). 개정은 매년 7월 1일.
+  final int pensionMonthlyCapFromJulyWon;
+  final int pensionMonthlyFloorFromJulyWon;
   final int dailyTaxExemptWon;
+
+  /// 정산 대상 월(1~12)의 기준소득월액 상한.
+  int pensionCapFor(int month) =>
+      month >= 7 ? pensionMonthlyCapFromJulyWon : pensionMonthlyCapWon;
+
+  int pensionFloorFor(int month) =>
+      month >= 7 ? pensionMonthlyFloorFromJulyWon : pensionMonthlyFloorWon;
   final int dailyIncomeTaxPer100k;
   final int dailyTaxCreditPer100k;
   final int dailyTaxMinWon;
@@ -130,6 +157,8 @@ class TaxRateTable {
     TaxRateKey.employmentEmployee => employmentEmployeePer100k,
     TaxRateKey.pensionMonthlyCap => pensionMonthlyCapWon,
     TaxRateKey.pensionMonthlyFloor => pensionMonthlyFloorWon,
+    TaxRateKey.pensionMonthlyCapFromJuly => pensionMonthlyCapFromJulyWon,
+    TaxRateKey.pensionMonthlyFloorFromJuly => pensionMonthlyFloorFromJulyWon,
     TaxRateKey.dailyTaxExempt => dailyTaxExemptWon,
     TaxRateKey.dailyIncomeTax => dailyIncomeTaxPer100k,
     TaxRateKey.dailyTaxCredit => dailyTaxCreditPer100k,
@@ -160,6 +189,13 @@ class TaxRateTable {
       pensionMonthlyFloorWon: key == TaxRateKey.pensionMonthlyFloor
           ? value
           : pensionMonthlyFloorWon,
+      pensionMonthlyCapFromJulyWon: key == TaxRateKey.pensionMonthlyCapFromJuly
+          ? value
+          : pensionMonthlyCapFromJulyWon,
+      pensionMonthlyFloorFromJulyWon:
+          key == TaxRateKey.pensionMonthlyFloorFromJuly
+          ? value
+          : pensionMonthlyFloorFromJulyWon,
       dailyTaxExemptWon: key == TaxRateKey.dailyTaxExempt
           ? value
           : dailyTaxExemptWon,
@@ -203,7 +239,8 @@ class TaxRateTable {
 
 /// 2025년 근로자 부담 요율.
 /// - 국민연금 4.5% (전체 9%), 건강보험 3.545% (전체 7.09%), 장기요양 12.95%
-/// - 고용보험 0.9%, 기준소득월액 상한 6,370,000원 / 하한 400,000원 (2025.7~)
+/// - 고용보험 0.9%, 기준소득월액 상한/하한: 1~6월 6,170,000/390,000 (2024.7 개정),
+///   7~12월 6,370,000/400,000 (2025.7 개정)
 /// - 일용근로소득: 일 15만원 공제, 6%, 세액공제 55%, 소액부징수 1,000원
 const TaxRateTable taxRateTable2025 = TaxRateTable(
   year: 2025,
@@ -211,8 +248,10 @@ const TaxRateTable taxRateTable2025 = TaxRateTable(
   healthEmployeePer100k: 3545,
   longTermCarePer100kOfHealth: 12950,
   employmentEmployeePer100k: 900,
-  pensionMonthlyCapWon: 6370000,
-  pensionMonthlyFloorWon: 400000,
+  pensionMonthlyCapWon: 6170000,
+  pensionMonthlyFloorWon: 390000,
+  pensionMonthlyCapFromJulyWon: 6370000,
+  pensionMonthlyFloorFromJulyWon: 400000,
   dailyTaxExemptWon: 150000,
   dailyIncomeTaxPer100k: 6000,
   dailyTaxCreditPer100k: 55000,
@@ -224,7 +263,8 @@ const TaxRateTable taxRateTable2025 = TaxRateTable(
 /// 2026년 근로자 부담 요율.
 /// - 국민연금 4.75% (전체 9.5% — 2026년부터 매년 0.5%p 인상, 2033년 13%)
 /// - 건강보험 3.595% (전체 7.19%), 장기요양 12.95% (동결)
-/// - 고용보험 0.9%, 기준소득월액 상한 6,370,000원 (2026.7 개정 시 갱신 필요)
+/// - 고용보험 0.9%, 기준소득월액 상한/하한: 1~6월 6,370,000/400,000 (2025.7 개정),
+///   7~12월 6,590,000/410,000 (2026.7 개정, A값 변동률 3.4% 반영 — 국민연금공단 안내)
 const TaxRateTable taxRateTable2026 = TaxRateTable(
   year: 2026,
   pensionEmployeePer100k: 4750,
@@ -233,6 +273,8 @@ const TaxRateTable taxRateTable2026 = TaxRateTable(
   employmentEmployeePer100k: 900,
   pensionMonthlyCapWon: 6370000,
   pensionMonthlyFloorWon: 400000,
+  pensionMonthlyCapFromJulyWon: 6590000,
+  pensionMonthlyFloorFromJulyWon: 410000,
   dailyTaxExemptWon: 150000,
   dailyIncomeTaxPer100k: 6000,
   dailyTaxCreditPer100k: 55000,
@@ -258,14 +300,23 @@ TaxRateTable defaultTaxRateTable(int year) {
   }
   final chosen = best ?? years.first;
   final base = defaultTaxRateTables[chosen]!;
+  // 미래 연도 승계: 최신 테이블의 7월 개정치가 그 다음 해 1~6월에도 이어진다.
+  // 과거 연도(가장 이른 테이블보다 앞)는 그 테이블 값을 그대로 쓴다.
+  final carryJuly = best != null;
   return TaxRateTable(
     year: year,
     pensionEmployeePer100k: base.pensionEmployeePer100k,
     healthEmployeePer100k: base.healthEmployeePer100k,
     longTermCarePer100kOfHealth: base.longTermCarePer100kOfHealth,
     employmentEmployeePer100k: base.employmentEmployeePer100k,
-    pensionMonthlyCapWon: base.pensionMonthlyCapWon,
-    pensionMonthlyFloorWon: base.pensionMonthlyFloorWon,
+    pensionMonthlyCapWon: carryJuly
+        ? base.pensionMonthlyCapFromJulyWon
+        : base.pensionMonthlyCapWon,
+    pensionMonthlyFloorWon: carryJuly
+        ? base.pensionMonthlyFloorFromJulyWon
+        : base.pensionMonthlyFloorWon,
+    pensionMonthlyCapFromJulyWon: base.pensionMonthlyCapFromJulyWon,
+    pensionMonthlyFloorFromJulyWon: base.pensionMonthlyFloorFromJulyWon,
     dailyTaxExemptWon: base.dailyTaxExemptWon,
     dailyIncomeTaxPer100k: base.dailyIncomeTaxPer100k,
     dailyTaxCreditPer100k: base.dailyTaxCreditPer100k,

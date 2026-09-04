@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 11 이하 자동 백업 규칙: DB·스냅샷(files/)과 설정(shared_prefs)을 명시적으로 포함.
+     WAL 파일도 함께 백업되며, 앱은 백그라운드 진입 시 wal_checkpoint 로 본체에 합쳐 둔다. -->
+<full-backup-content>
+    <include domain="file" path="." />
+    <include domain="sharedpref" path="." />
+</full-backup-content>

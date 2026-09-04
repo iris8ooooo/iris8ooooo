@@ -6,6 +6,7 @@ import 'db_providers.dart';
 
 /// 보관되지 않은 업체 (sortOrder 순) — 선택 UI용.
 final sitesProvider = StreamProvider.autoDispose<List<Site>>((ref) {
+  ref.keepAlive(); // 입력 시트 업체 칩이 첫 프레임부터 보이도록 상시 유지
   return ref.watch(databaseProvider).siteDao.watchActive();
 });
 
@@ -35,6 +36,7 @@ final siteRatesProvider = StreamProvider.autoDispose
 
 /// 입력 시트에서 마지막으로 고른 업체 id (설정에 저장). null = 미지정.
 final lastSiteIdProvider = StreamProvider.autoDispose<int?>((ref) {
+  ref.keepAlive();
   return ref
       .watch(settingsRepoProvider)
       .watchInt(SettingsRepository.keyLastSiteId);

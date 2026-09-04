@@ -229,10 +229,14 @@ class _MonthBar extends StatelessWidget {
       child: Row(
         children: [
           SizedBox(
-            width: 36,
-            child: Text(
-              '${monthOfYm(stat.ym)}월',
-              style: const TextStyle(fontSize: 14),
+            width: 40,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '${monthOfYm(stat.ym)}월',
+                style: const TextStyle(fontSize: 14),
+              ),
             ),
           ),
           Expanded(
@@ -261,19 +265,31 @@ class _MonthBar extends StatelessWidget {
           const SizedBox(width: 8),
           SizedBox(
             width: 56,
-            child: Text(
-              stat.centi == 0 ? '-' : formatGongsu(stat.centi),
-              textAlign: TextAlign.end,
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                stat.centi == 0 ? '-' : formatGongsu(stat.centi),
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
           if (showMoney)
             SizedBox(
               width: 92,
-              child: Text(
-                stat.hasMoney ? formatWon(stat.netWon) : '',
-                textAlign: TextAlign.end,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerRight,
+                child: Text(
+                  stat.hasMoney ? formatWon(stat.netWon) : '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
         ],

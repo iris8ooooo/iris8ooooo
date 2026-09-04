@@ -38,7 +38,7 @@ echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zprofile
 flutter doctor
 ```
 
-초록 체크가 몇 개 보이면 성공입니다. iOS 줄에 CocoaPods 관련 빨간 X가 있으면:
+초록 체크가 몇 개 보이면 성공입니다. (이 앱은 CocoaPods 없이 빌드됩니다. iOS 줄에 CocoaPods 경고가 떠도 그냥 진행하세요. 나중에 실행 중 "CocoaPods not installed" 오류가 실제로 나올 때만 아래를 실행합니다.)
 
 ```bash
 sudo gem install cocoapods
@@ -184,7 +184,7 @@ flutter run
 
 **실행이 "Signing" 또는 "App Groups" 오류로 멈추면**: `ios/Runner.xcworkspace`를 Xcode로 열기 → 왼쪽 맨 위 **Runner** 클릭 → 가운데 TARGETS에서 **Runner** → **Signing & Capabilities** 탭 → Team을 본인 Apple ID로 선택. 같은 화면에서 TARGETS의 **GongsuWidget**도 같은 Team으로 선택한 뒤 다시 `flutter run`. 시뮬레이터는 무료 Apple ID로 충분합니다. 실제 아이폰에서는 위젯의 App Groups 기능 때문에 유료 개발자 계정이 필요할 수 있어요 — M6 출시 준비 때 함께 처리합니다.
 
-**갤럭시(안드로이드)에서 보려면**: Windows PC에 Flutter를 설치하고 USB로 연결해 `flutter run` (이 가이드는 Mac 기준이라, 원하시면 Windows용 가이드를 따로 만들어 드립니다). 홈 화면 길게 누르기 → **위젯** → **공수장부** → "이번 달 공수"(2×2)를 끌어다 놓기.
+**갤럭시(안드로이드)에서 보려면**: Windows PC에 Flutter를 설치하고 USB로 연결해 `flutter run` (이 가이드는 Mac 기준이라, Windows용은 `RUN_GUIDE_WINDOWS.md`를 보세요). 홈 화면 길게 누르기 → **위젯** → **공수장부** → "이번 달 공수"(2×2)를 끌어다 놓기.
 
 ## M6에서 확인해 볼 것 (온보딩 · 설정 · 프로 · 출시 준비)
 
@@ -193,7 +193,8 @@ flutter run
 - [ ] 설정 → **직군 프리셋 다시 고르기**: 이름을 고친 프리셋은 그대로 남고 안 고친 기본 버튼만 바뀐다
 - [ ] 앱 이름이 홈 화면에 **공수장부**로, 아이콘이 파란 달력 카드로 보인다
 - [ ] **무료 제한**: 업체를 3개 만든 뒤 하나 더 추가하면 **프로 안내 화면**이 뜬다. 정산의 PDF 버튼, 설정의 테마 색도 같은 안내가 뜬다. 위젯은 "프로 전용" 문구를 보여준다
-- [ ] 프로 화면에서 "프로 구매하기"를 누르면 시뮬레이터에서는 **"스토어를 사용할 수 없어요"** 안내가 뜬다 — 정상입니다. 실제 결제 테스트는 RELEASE_GUIDE 의 TestFlight 샌드박스 / Play 라이선스 테스터로 합니다
+- [ ] 프로 화면에서 "프로 구매하기"를 누르면 시뮬레이터에서는 **"스토어와 연결하지 못했어요"**(또는 "스토어를 사용할 수 없어요") 안내가 뜬다 — 스토어에 상품이 아직 없어서 나는 정상 반응입니다. 실제 결제 테스트는 RELEASE_GUIDE 의 TestFlight 샌드박스 / Play 라이선스 테스터로 합니다
+- [ ] 설정 → **삭제된 기록 되살리기**: 달력에서 기록 하나를 지운 뒤(실행 취소는 무시) 여기서 "되살리기"를 누르면 달력에 돌아온다
 - [ ] 설정 → 개인정보처리방침, 오픈소스 라이선스가 열린다
 
 출시 절차 전체는 `docs/RELEASE_GUIDE.md`, 스토어에 넣을 문안은 `docs/STORE_LISTING.md` 를 보세요.

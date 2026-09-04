@@ -104,7 +104,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - **soft delete만 존재**: 기록 삭제 = deletedAtMillis 세팅 + 실행 취소. 읽기는 DAO의 alive 필터 단일 진입점만 사용(백업 내보내기만 예외로 삭제 행 포함). 물리 삭제/DROP은 소스 가드 테스트로 부재 증명
 - **모든 기록성 행에 uid(UUIDv4)**: 백업 병합·v2 기기 간 병합의 upsert 키. 시드 프리셋은 고정 uid (기기 간 중복 생성 방지)
 - **연속 입력은 기본 동작** (설정 아님): 빈 날 첫 입력은 저장 후 시트 자동 닫힘, 기록 있는 날은 시트 유지 append
-- **마이그레이션**: additive-only 하드 룰(CREATE TABLE/ADD COLUMN/CREATE INDEX만). drift 열기 전 pre-open guard가 user_version 검사 → 업그레이드 직전 DB 파일 + -wal/-shm 동반 백업(최근 2세트 회전), 다운그레이드는 열지 않고 안내
+- **마이그레이션**: additive-only 하드 룰(CREATE TABLE/ADD COLUMN/CREATE INDEX만). drift 열기 전 pre-open guard가 user_version 검사 → 업그레이드 직전 DB 파일 + -wal/-shm 동반 백업(최근 2세트 회전), 다운그레이드는 열지 않고 안내. 업그레이드는 **재시도 안전**: onCreate 는 한 트랜잭션(스키마+시드+user_version), onUpgrade 는 컬럼(`_hasColumn`)·인덱스(`IF NOT EXISTS`)를 있으면 건너뛰고 마지막에 user_version 을 직접 쓴다 — 커밋 뒤 버전 기록 전에 죽어도 다음 실행이 같은 단계를 무사히 다시 돈다(`migration_test` 재시도 테스트)
 - **간이 JSON 백업을 M1부터 탑재** (M4 정식 백업의 축소판, 같은 봉투 규약): 내보내기는 삭제 행 포함, 가져오기는 병합 전용(uid upsert, updatedAt 최신 승리) — 기존 데이터를 지우는 경로 없음. 백업 schemaVersion > 앱 버전이면 명시 거부
 - **provider 구조**: 월 쿼리 1회(monthEntriesProvider)가 유일한 소스, 월 합계/일 상세는 파생. family 키는 전부 int. 이웃 달 ±1 미리 구독. main()은 shared_preferences 1회 로드 + runApp만(DB lazy open — M6에서 첫 프레임 설정값을 위해 prefs 읽기 추가)
 - **M6 온보딩 직군 선택 규칙(선확정)**: 사용자가 수정하지 않은 시드 프리셋(고정 uid + createdAt==updatedAt)만 교체, 손댄 프리셋은 불변
@@ -139,11 +139,11 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 
 ### M3에서 확정된 규칙
 - 세금은 저장하지 않고 조회 시점에 계산한다 (`domain/tax_engine.dart`). 업체별 `Sites.taxMode`('none'|'withholding33'|'insurance4') + `taxOptionsJson`(TaxOptions). 기본 'none' — 잘못된 공제보다 공제 없음이 안전
-- 3.3% = 소득세 3% + 지방소득세(소득세의 10%). 4대보험 = 근로자 부담분(국민연금·건강·장기요양(건강보험료의 %)·고용) + 옵션 일용근로소득세(일 15만원 공제 후 6%, 세액공제 55% → 실효 2.7%, 소액부징수 1,000원, 지방소득세 10%). 국민연금·건강보험은 해당 업체 월 근무일 ≥ pensionHealthMinDays(기본 8, 0=항상)일 때만. 국민연금 기준소득은 상·하한 적용 후 천원 미만 절사
+- 3.3% = 소득세 3% + 지방소득세(소득세의 10%). 4대보험 = 근로자 부담분(국민연금·건강·장기요양(건강보험료의 %)·고용) + 옵션 일용근로소득세(일 15만원 공제 후 6%, 세액공제 55% → 실효 2.7%, 소액부징수 1,000원, 지방소득세 10%). 국민연금·건강보험은 해당 업체 월 근무일 ≥ pensionHealthMinDays(기본 8, 0=항상)일 때만. 국민연금 기준소득은 상·하한 적용 후 천원 미만 절사. 상·하한은 매년 7월 개정 → 테이블에 1~6월(`pensionMonthlyCapWon`/`FloorWon`)·7월부터(`…FromJulyWon`) 두 벌, `pensionCapFor(month)`로 해석. 미래 연도 폴백은 최신 7월 개정치를 연중 승계
 - 비율은 전부 십만분율(per100k) 정수. 요율은 연도별 상수(`domain/tax_rates.dart`, 2025/2026) + AppSettings `tax_rates_override_<year>` JSON 병합(모르는 키·음수 무시). 미래 연도는 최신 테이블 승계. **매년 초 요율 상수 갱신 필수**
 - 끝전: AppSettings `tax_rounding` ('floor10' 기본 | 'exact'). 모든 공제 항목에 개별 적용
 - 과세 기준 = 노무비(공수×단가) + `isTaxable` 가산 항목. 공제 항목은 과세 기준을 줄이지 않는다. 일용근로소득세는 날짜별 과세 기준으로 계산
-- 기간 정산(`domain/settlement.dart`)이 월 카드·정산 화면·통계의 단일 계산 경로. 업체 미지정 묶음(siteId null)은 세금 없음. 세율은 기간 종료일 연도 기준
+- 기간 정산(`domain/settlement.dart`)이 월 카드·정산 화면·통계의 단일 계산 경로. 업체 미지정 묶음(siteId null)은 세금 없음. 3.3%·일용소득세 세율은 기간 종료일 연도 기준. **4대보험은 달력월 단위로 따로 계산**(21일~20일 마감 기간이면 두 달 각각): 근무일 8일 판정은 기간 밖 날짜까지 포함한 그 달 전체 근무일로, 요율·상한은 그 달의 연도·월로. 그래서 `periodSettlementProvider`는 기간을 덮는 달 전체(`_monthCoveringKey`)를 구독하고 관련 연도 테이블을 전부 받는다
 - 정산 마감 주기 시작일은 AppSettings `settle_cycle_start_day`(1~28). 정산 화면 family 키는 `periodKey(from,to) = from×1e8 + to`
 - 공휴일은 `domain/korean_holidays.dart` 상수(2025~2027, 2027은 잠정). API 호출 없음. 매년 월력요항 확정 시 갱신
 - 통계는 연간 12개월을 정산 함수로 각각 계산해 파생 (별도 집계 로직 없음)
@@ -151,7 +151,12 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 ### M4에서 확정된 규칙
 - 텍스트 백업 봉투 `GSJB1:` + base64(gzip(JSON 봉투)) (`data/backup/backup_text_codec.dart`). 복원은 GSJB1 텍스트·원시 JSON·파일 모두 `decodeBackupText`로 정규화 → `importBackupJson`(병합 전용). 메신저가 끼워 넣는 공백/줄바꿈은 제거
 - 자동 스냅샷: `snapshots/snapshot_<yyyyMMdd>.gsjb`, 앱 첫 프레임 뒤 그날 파일이 없으면 생성, 백그라운드 진입(paused) 시 그날 파일 갱신, 최근 7일 회전. 임시 파일에 쓴 뒤 rename. 실패는 조용히 무시(안전망이지 전제가 아님). `SnapshotScheduler`가 홈을 감싼다
-- 플러그인(share_plus/file_picker/printing/path_provider)은 `services/share_service.dart` 추상화 뒤에 두고 위젯 테스트는 가짜로 override — 플러그인을 직접 호출하는 위젯 코드 금지
+- 플러그인(share_plus/file_picker/printing/path_provider)은 `services/share_service.dart` 추상화 뒤에 두고 위젯 테스트는 가짜로 override — 플러그인을 직접 호출하는 위젯 코드 금지. 가져오기 파일은 20MB 상한(`maxBackupFileBytes`, `PlatformFile.length()`로 먼저 검사)
+- 백업 봉투에 `appSettings`도 들어간다 — 단, 허용 목록만(`backupSettingKeys`: report_worker_name·tax_rounding·settle_cycle_start_day·job_kind + `tax_rates_override_*`). 화면 설정(prefs 미러 키)·pro_unlocked·last_site_id 는 기기 값이라 제외. 가져올 때 설정은 없을 때만 넣는다(기존 값 유지)
+- 가져오기는 행 단위 관용: 깨진 행 하나는 건너뛰고(skipped 카운트) 나머지는 살린다. 날짜 키는 실제 달력으로 검증(`_isPlausibleDateKey`). 내보내기는 한 트랜잭션 안에서 전 테이블을 읽는다(일관 스냅샷). 텍스트 복원은 base64 문자 외 전부 제거 후 `base64.normalize` — 메신저가 끼워 넣는 어떤 문자도 허용
+- 휴지통(`ui/backup/trash_page.dart`, 설정 > 기록 > 삭제된 기록): soft delete 된 공수·부가항목을 보여 주고 '되살리기'로 deletedAtMillis 를 null 로 되돌린다. DAO `watchDeleted()`가 유일한 삭제 행 읽기 경로
+- DB 열기 실패 화면(`_DbErrorView`)에는 '다시 시도'(databaseProvider invalidate)와 '기록 복구'가 있다. 복구 = `data/db/db_rescue.dart`의 `quarantineDatabaseFiles`로 db/-wal/-shm 을 `gongsu.db.corrupt_<시각>.bak`으로 **이름만 바꾸고**(삭제 아님) 새 DB를 연 뒤 최신 스냅샷을 병합 복원. 파괴 경로는 여전히 없다
+- 스냅샷 저장 직전 `PRAGMA wal_checkpoint(TRUNCATE)` — Android 자동 백업(`res/xml/backup_rules.xml`·`data_extraction_rules.xml`, WAL/SHM 제외)이 반쯤 쓰인 DB 를 올리지 않게
 - 공수 확인서 PDF: `data/export/work_report_data.dart`(정산 결과 + 행 데이터 조립) → `work_report_pdf.dart`(pdf 패키지). 합계·공제는 반드시 정산 엔진 결과를 쓴다(화면과 숫자 일치). 한글 폰트는 `assets/fonts/NanumGothic-*.ttf`(OFL, 약 4MB) 내장 — 네트워크 폰트 금지
 - 달력 캡쳐: `RepaintBoundary` → PNG → 공유. 배경은 surface 색으로 채워 투명 PNG 방지
 
@@ -170,15 +175,20 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 주 시작 요일은 `appearanceProvider.weekStart`가 유일한 소스 — `monthGridDateKeys`·`weekdayOrder`에 항상 넘긴다. 주말 색은 요일 기준(순서와 무관)
 - 온보딩 직군 교체는 `data/seed/seed_switch.dart` 순수 계획 + `PresetRepository.applyJobSeed` 트랜잭션. 보관/복원은 updatedAt 을 건드리지 않는다(`setArchivedSilently`) — 올리면 '사용자 수정'이 되어 다시는 교체 대상이 안 된다. '직접 만들기' = 미수정 시드 전부 보관
 - 프로 = 비소모성 `gongsu_pro` 하나(두 스토어 동일 ID). 검증은 스토어 응답만(서버 없음), 상태는 기기 로컬 → 다른 기기는 '이전 구매 복원'. 결제 코드는 `services/purchase_service.dart` 추상화 뒤(테스트는 가짜). 게이팅 진입점은 `ui/pro/pro_gate.dart`의 `ensurePro` 하나: 업체 4개째(`freeSiteLimit`=3), 확인서 PDF, 테마 색(id≠0), 위젯(잠김 페이로드 `widget_locked`=1 → 네이티브가 안내 문구)
+- 구매 신호는 페이월 화면이 아니라 `ui/common/purchase_syncer.dart`(홈을 감쌈)가 받는다: `PurchaseService.entitlementHandler`가 `completePurchase` **전에** `proProvider.unlock()`을 끝내야 한다(실패하면 complete 를 미뤄 스토어가 다시 준다). Android 는 앱 시작 시 `reconcileAtStartup()`(restorePurchases) 로 재설치·기기 이전을 자동 반영, iOS 는 로그인 창이 뜨므로 사용자 버튼만. 페이월의 복원 대기 타이머는 `Timer`로 두고 dispose 에서 취소
+- 선택형 설정 UI 는 `SegmentedButton` 대신 `ui/common/choice_chip_row.dart`(`ChoiceChipRow`, Wrap) — 360dp·아주 크게 글씨에서 넘치지 않는다. 고정폭 숫자 칸은 `FittedBox(scaleDown)`
+- 프리셋·업체·마지막 업체 provider 는 `ref.keepAlive()` — 시트가 열릴 때마다 DB 를 다시 읽지 않는다. 홈 위젯 동기화는 월 기록·단가·업체 세 provider 가 모두 값을 가진 뒤에만 보낸다(로딩 중 0 공수 페이로드 금지)
 - 앱 표시 버전은 `lib/app_info.dart` 상수 — pubspec `version`과 일치를 테스트로 고정. 아이콘은 `test/screenshots/app_icon_test.dart`(ICON_OUT=1)로 생성 후 `dart run flutter_launcher_icons`
 - Android 릴리스 서명은 `android/key.properties`(git 제외) 있을 때만 release 키, 없으면 debug 키로 폴백(`flutter run --release` 가능). 출시 절차·스토어 문안·개인정보처리방침은 `docs/RELEASE_GUIDE.md`·`STORE_LISTING.md`·`PRIVACY_POLICY.md`(앱 내 `privacy_text.dart`와 동일 유지)
 
 ## 백로그
 
 - 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안)
-- 2027년 공휴일 대체공휴일 확정치 반영 / 2026.7 국민연금 기준소득 상한 개정치 반영
+- 2027년 공휴일 대체공휴일 확정치 반영 / 2027.7 국민연금 기준소득 상한 개정치(매년 7월 갱신)
 - 저가 실기기(갤럭시 A 시리즈) `--profile` 콜드 스타트 측정을 마일스톤 완료 게이트로 (오너 실기기 확보 시)
 - 출시 후: 실기기 프로 결제·복원 검증(샌드박스), 위젯 프로 게이팅 UX 피드백, 스토어 심사 피드백 반영
+- 세금 정밀도(전체 점검에서 나온 것, 오너 결정 필요): 일용소득세 소액부징수를 '지급 건별'로 묶는 옵션(지금은 일별) / 월 60시간 미만·220만원 미만 국민연금 제외 규칙 / 같은 날 두 단가 이력의 우선순위(지금은 updatedAt 최신)
+- 기술 부채: 스냅샷 gzip 인코딩을 UI isolate 밖으로(FakeAsync 테스트와 충돌해 보류) / `printing` 플러그인도 서비스 추상화 뒤로 / 온보딩 직군 변경을 `job_kind` 설정으로 전파 / 달력 날짜 셀 semantics 라벨 / iPad 지원 여부 결정(지금은 iPhone 전용 `TARGETED_DEVICE_FAMILY=1`) / `sqlite3_flutter_libs` 의존 정리
 
 ## 테스트 작성 주의 (재발 방지)
 

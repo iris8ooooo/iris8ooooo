@@ -8,6 +8,7 @@ import 'state/pro_providers.dart';
 import 'ui/app_theme.dart';
 import 'ui/calendar/calendar_page.dart';
 import 'ui/common/home_widget_syncer.dart';
+import 'ui/common/purchase_syncer.dart';
 import 'ui/common/snapshot_scheduler.dart';
 import 'ui/onboarding/onboarding_page.dart';
 
@@ -52,11 +53,13 @@ class GongsuApp extends ConsumerWidget {
           child: child!,
         );
       },
-      home: onboarded
-          ? const SnapshotScheduler(
-              child: HomeWidgetSyncer(child: CalendarPage()),
-            )
-          : const OnboardingPage(),
+      home: PurchaseSyncer(
+        child: onboarded
+            ? const SnapshotScheduler(
+                child: HomeWidgetSyncer(child: CalendarPage()),
+              )
+            : const OnboardingPage(),
+      ),
     );
   }
 }

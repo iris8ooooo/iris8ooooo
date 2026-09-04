@@ -39,8 +39,9 @@
         android:textColor="@color/widget_text_secondary"
         android:text="근무 0일" />
 
-    <View
-        android:layout_width="0dp"
+    <!-- RemoteViews 는 android.view.View 를 인플레이트하지 못한다 — 여백은 FrameLayout 으로 -->
+    <FrameLayout
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 

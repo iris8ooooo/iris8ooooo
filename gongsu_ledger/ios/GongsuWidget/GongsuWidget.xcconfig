@@ -1,0 +1,3 @@
+// 위젯 확장은 Flutter 의 버전 정보만 물려받는다. Runner 의 Debug/Release.xcconfig 를
+// 그대로 쓰면 CocoaPods 폴백 시 Pods-Runner 링크 플래그가 확장에 섞여 들어온다.
+#include "../Flutter/Generated.xcconfig"

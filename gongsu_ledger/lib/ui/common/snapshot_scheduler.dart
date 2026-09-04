@@ -55,9 +55,13 @@ class _SnapshotSchedulerState extends ConsumerState<SnapshotScheduler>
 
   Future<void> _refreshToday() async {
     try {
+      final db = ref.read(databaseProvider);
+      // WAL 을 본체 파일에 합쳐 둔다 — OS 자동 백업(구글/아이클라우드)이 -wal 없이
+      // DB 파일만 가져가도 최근 기록이 빠지지 않도록.
+      await db.customStatement('PRAGMA wal_checkpoint(TRUNCATE)');
       await ref
           .read(snapshotServiceProvider)
-          .writeSnapshot(ref.read(databaseProvider), dateKeyOf(DateTime.now()));
+          .writeSnapshot(db, dateKeyOf(DateTime.now()));
     } catch (_) {}
   }
 

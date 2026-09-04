@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'trash_page.dart';
+
 import '../../data/backup/backup_codec.dart';
 import '../../data/backup/backup_text_codec.dart';
 import '../../data/backup/snapshot_service.dart';
@@ -167,7 +169,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
   Future<void> _restoreSnapshot(SnapshotInfo info) => _run(() async {
     final confirmed = await _confirm(
       '${_formatDate(info.dateKey)} 스냅샷 복원',
-      '그날 저장된 자동 백업을 지금 데이터에 병합합니다.\n그 뒤에 입력한 기록은 그대로 남아요.',
+      '그날 저장된 자동 백업을 지금 데이터에 병합합니다.\n그 뒤에 입력하거나 지운 기록은 그대로 남아요 (지운 기록은 "삭제된 기록"에서 되살립니다).',
       '복원',
     );
     if (confirmed != true || !mounted) return;
@@ -322,8 +324,21 @@ class _BackupPageState extends ConsumerState<BackupPage> {
             title: '자동 스냅샷 (최근 7일)',
             children: [
               Text(
-                '앱을 열거나 닫을 때 그날의 백업을 기기 안에 자동으로 남겨요. 실수로 지웠을 때 여기서 되돌립니다.',
+                '앱을 열거나 닫을 때 그날의 백업을 기기 안에 자동으로 남겨요. 기록이 통째로 사라지거나 파일이 깨졌을 때 되돌리는 용도예요.',
                 style: hint,
+              ),
+              const SizedBox(height: 4),
+              Text('실수로 지운 기록 하나는 스냅샷이 아니라 "삭제된 기록"에서 되살립니다.', style: hint),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  key: const ValueKey('open-trash'),
+                  icon: const Icon(Icons.restore_from_trash_outlined),
+                  label: const Text('삭제된 기록 보기'),
+                  onPressed: () => Navigator.of(
+                    context,
+                  ).push(MaterialPageRoute(builder: (_) => const TrashPage())),
+                ),
               ),
               const SizedBox(height: 8),
               snapshots.when(

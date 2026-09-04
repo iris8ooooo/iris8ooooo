@@ -68,6 +68,7 @@ class SiteListPage extends ConsumerWidget {
         icon: const Icon(Icons.add),
         label: const Text('업체 추가'),
         onPressed: () async {
+          if (!sitesAsync.hasValue) return; // 목록이 오기 전엔 판정하지 않는다
           // 무료 티어 업체 상한 — 프로가 아니면 페이월.
           if (!canAddSite(
             activeSites: sites.length,

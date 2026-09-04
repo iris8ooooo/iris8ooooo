@@ -61,9 +61,22 @@ void main() {
       final code = stripComments(file.readAsStringSync());
       for (final m in RegExp(r'delete\s*\(\s*(\w+)').allMatches(code)) {
         final table = m.group(1)!;
-        if (table == 'workEntries' || table == 'presets') {
+        if (const {
+          'workEntries',
+          'presets',
+          'sites',
+          'siteRateHistories',
+          'dayExtraItems',
+          'appSettings',
+        }.contains(table)) {
           offenders.add('${file.path} → delete($table)');
         }
+      }
+      if (RegExp(r'DELETE\s+FROM', caseSensitive: false).hasMatch(code)) {
+        offenders.add('${file.path} → 원시 DELETE 문');
+      }
+      if (RegExp(r'\.deleteWhere\s*\(').hasMatch(code)) {
+        offenders.add('${file.path} → deleteWhere');
       }
     }
     expect(

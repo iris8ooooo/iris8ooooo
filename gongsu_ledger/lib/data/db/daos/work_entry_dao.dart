@@ -53,6 +53,13 @@ class WorkEntryDao extends DatabaseAccessor<AppDatabase>
   Future<WorkEntry?> getById(int id) =>
       (_alive()..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// 삭제된(soft delete) 기록 — '삭제된 기록' 화면용. 최근 삭제가 먼저.
+  Stream<List<WorkEntry>> watchDeleted() =>
+      (select(workEntries)
+            ..where((t) => t.deletedAtMillis.isNotNull())
+            ..orderBy([(t) => OrderingTerm.desc(t.deletedAtMillis)]))
+          .watch();
+
   Future<int> insertEntry(WorkEntriesCompanion entry) =>
       into(workEntries).insert(entry);
 

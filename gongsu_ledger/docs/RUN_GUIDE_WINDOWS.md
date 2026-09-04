@@ -148,6 +148,7 @@ flutter build apk
 | 경로에 한글이나 공백이 있어 이상한 오류 | 코드와 Flutter를 `C:\dev` 아래에 둔다 |
 | 개발자 옵션 메뉴가 안 보임 | 삼성은 "휴대전화 정보 → 소프트웨어 정보" 안의 빌드번호를 7번 눌러야 생긴다 |
 | 빌드가 너무 느림 | Windows 보안 → 바이러스 및 위협 방지 → 제외 항목에 `C:\dev` 추가 (선택) |
+| `NDK not found` / `No version of NDK matched` | Android Studio → SDK Manager → SDK Tools → **NDK (Side by side)** 체크 → Apply 후 다시 `flutter run` (첫 빌드에서 자동 설치되기도 함) |
 
 ## 갤럭시에서 확인해 볼 것
 

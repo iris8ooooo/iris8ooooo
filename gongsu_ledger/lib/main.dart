@@ -1,4 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -11,6 +13,12 @@ import 'state/prefs_providers.dart';
 /// 경량 저장소(shared_preferences)에서 읽고 시작한다 (깜빡임 방지).
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // 내장 글꼴(나눔고딕, SIL OFL) 라이선스를 "오픈소스 라이선스" 화면에 표시한다.
+  LicenseRegistry.addLicense(() async* {
+    yield LicenseEntryWithLineBreaks(const [
+      'NanumGothic',
+    ], await rootBundle.loadString('assets/fonts/OFL.txt'));
+  });
   final prefs = await SharedPreferences.getInstance();
   runApp(
     ProviderScope(

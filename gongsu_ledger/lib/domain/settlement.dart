@@ -121,9 +121,19 @@ class _SiteAccumulator {
   final Set<int> workedDayKeys = {};
   final Map<int, int> laborByDay = {};
   final Map<int, int> taxableAllowanceByDay = {};
+
+  /// 달(yyyyMM)별 근무일 — 기간 밖 행도 포함한다. 4대보험 "월 8일 이상" 판정은
+  /// 정산 기간이 아니라 달력상의 달 전체가 기준이기 때문이다.
+  final Map<int, Set<int>> monthWorkedDayKeys = {};
 }
 
-/// 기간 정산 계산. 입력은 이미 기간 밖 행이 섞여 있어도 되며 여기서 거른다.
+/// 기간 정산 계산. 입력은 기간 밖 행이 섞여 있어도 된다 — 금액은 기간 안 행만
+/// 더하고, 기간 밖 행은 4대보험의 월 근무일 판정에만 쓴다 (호출자는 기간이 걸친
+/// 달 전체의 기록을 넘기는 것이 좋다; 안 넘기면 기간 안 근무일만으로 판정).
+///
+/// 4대보험(국민연금·건강·장기요양·고용·일용소득세)은 달마다 따로 계산해 합산한다
+/// — 상·하한과 8일 판정이 달 단위 규칙이라 마감 주기(예: 21일~20일)처럼 두 달에
+/// 걸친 기간을 한 덩어리로 계산하면 틀린다. 3.3%는 지급 단위 비례라 기간 전체로.
 PeriodSettlement buildPeriodSettlement({
   required int fromKey,
   required int toKey,
@@ -140,9 +150,14 @@ PeriodSettlement buildPeriodSettlement({
   final histList = histories.toList();
 
   for (final e in entries) {
-    if (e.dateKey < fromKey || e.dateKey > toKey) continue;
     assert(e.centiGongsu >= 0);
     final a = acc.putIfAbsent(e.siteId, _SiteAccumulator.new);
+    if (e.centiGongsu > 0) {
+      a.monthWorkedDayKeys
+          .putIfAbsent(e.dateKey ~/ 100, () => <int>{})
+          .add(e.dateKey);
+    }
+    if (e.dateKey < fromKey || e.dateKey > toKey) continue;
     a.centi += e.centiGongsu;
     a.entryCount++;
     if (e.centiGongsu > 0) {
@@ -180,7 +195,8 @@ PeriodSettlement buildPeriodSettlement({
     }
   }
 
-  final rates = ratesForYear(toKey ~/ 10000);
+  final endRates = ratesForYear(toKey ~/ 10000);
+  final endMonth = (toKey ~/ 100) % 100;
   final sites = <SiteSettlement>[];
   var totalCenti = 0;
   var unpriced = 0;
@@ -196,22 +212,54 @@ PeriodSettlement buildPeriodSettlement({
 
   for (final siteId in keys) {
     final a = acc[siteId]!;
+    // 기간 밖 행만 있는 업체(월 판정용 문맥)는 정산 목록에 넣지 않는다.
+    if (a.entryCount == 0 && a.allowanceWon == 0 && a.deductionWon == 0) {
+      continue;
+    }
     final config = siteId == null ? null : taxBySite[siteId];
     final mode = config?.mode ?? TaxMode.none;
+    final options = config?.options ?? TaxOptions.defaults;
     final dayKeys = {...a.laborByDay.keys, ...a.taxableAllowanceByDay.keys};
-    final dailyTaxable = [
-      for (final d in dayKeys)
-        (a.laborByDay[d] ?? 0) + (a.taxableAllowanceByDay[d] ?? 0),
-    ];
-    final siteTax = computeTax(
-      mode: mode,
-      options: config?.options ?? TaxOptions.defaults,
-      rates: rates,
-      rounding: rounding,
-      taxableBaseWon: a.laborWon + a.taxableAllowanceWon,
-      dailyTaxableWon: dailyTaxable,
-      workedDays: a.workedDayKeys.length,
-    );
+    int taxableOf(int d) =>
+        (a.laborByDay[d] ?? 0) + (a.taxableAllowanceByDay[d] ?? 0);
+
+    TaxBreakdown siteTax;
+    if (mode == TaxMode.insurance4) {
+      // 달별로 잘라 계산 — 상·하한, 8일 판정, 연도별 요율이 전부 달 단위.
+      final byMonth = <int, List<int>>{};
+      for (final d in dayKeys) {
+        byMonth.putIfAbsent(d ~/ 100, () => []).add(d);
+      }
+      siteTax = TaxBreakdown.zero;
+      final months = byMonth.keys.toList()..sort();
+      for (final ym in months) {
+        final days = byMonth[ym]!;
+        final daily = [for (final d in days) taxableOf(d)];
+        siteTax =
+            siteTax +
+            computeTax(
+              mode: mode,
+              options: options,
+              rates: ratesForYear(ym ~/ 100),
+              rounding: rounding,
+              taxableBaseWon: daily.fold(0, (s, v) => s + v),
+              dailyTaxableWon: daily,
+              workedDays: a.monthWorkedDayKeys[ym]?.length ?? 0,
+              month: ym % 100,
+            );
+      }
+    } else {
+      siteTax = computeTax(
+        mode: mode,
+        options: options,
+        rates: endRates,
+        rounding: rounding,
+        taxableBaseWon: a.laborWon + a.taxableAllowanceWon,
+        dailyTaxableWon: [for (final d in dayKeys) taxableOf(d)],
+        workedDays: a.workedDayKeys.length,
+        month: endMonth,
+      );
+    }
     final s = SiteSettlement(
       siteId: siteId,
       taxMode: mode,
