@@ -194,6 +194,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 출시 후: 실기기 프로 결제·복원 검증(샌드박스), 위젯 프로 게이팅 UX 피드백, 스토어 심사 피드백 반영
 - 오너 개발 환경 수명: 맥이 인텔이라 **Xcode 26.6이 마지막**(27부터 애플 실리콘 전용), Flutter 도 인텔 지원 중단 예고. 두 버전을 올리지 말고 고정. 애플 실리콘 맥으로 옮기기 전까지 이 조합이 빌드 기준
 - 세금 정밀도(전체 점검에서 나온 것, 오너 결정 필요): 일용소득세 소액부징수를 '지급 건별'로 묶는 옵션(지금은 일별) / 월 60시간 미만·220만원 미만 국민연금 제외 규칙 / 같은 날 두 단가 이력의 우선순위(지금은 updatedAt 최신)
+- **애플워치(M7/v1.1 후보)**: 설계는 `gongsu_ledger/docs/DESIGN_APPLE_WATCH.md` 에 정리됨. Flutter 는 watchOS 미지원이라 네이티브 SwiftUI 타깃 + `WatchConnectivity`(App Group 은 기기 간 불가). 1단계 보기 전용(위젯 페이로드 재사용, 데이터 위험 0) → 2단계 손목 기록(워치는 DB 없이 큐만, `transferUserInfo` 보장 전달, uid upsert, 미전송 건수 항상 표시, 워치에서 삭제·수정 불가). 실기기 테스트에 유료 개발자 프로그램 필요. Wear OS 는 별건
 - 기술 부채: 스냅샷 gzip 인코딩을 UI isolate 밖으로(FakeAsync 테스트와 충돌해 보류) / `printing` 플러그인도 서비스 추상화 뒤로 / 온보딩 직군 변경을 `job_kind` 설정으로 전파 / 달력 날짜 셀 semantics 라벨 / iPad 지원 여부 결정(지금은 iPhone 전용 `TARGETED_DEVICE_FAMILY=1`) / `sqlite3_flutter_libs` 의존 정리
 
 ## 테스트 작성 주의 (재발 방지)
