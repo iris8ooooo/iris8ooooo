@@ -20,7 +20,11 @@ fi
 
 echo "[0/4] 최신 코드 받기"
 if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
-  echo "  내 Mac 에서 고친 파일이 있어 이번엔 건너뜁니다 (그대로 실행합니다)."
+  echo "  ⚠️  내 Mac 에서 고친 파일이 있어 최신 코드를 못 받았습니다."
+  echo "     (그대로 실행은 됩니다. 최신으로 맞추려면 아래 한 줄을 터미널에 붙여넣으세요)"
+  echo
+  echo "       cd ~/development/gongsu-app && git stash -u && git pull origin main"
+  echo
 else
   git pull --ff-only origin main 2>&1 | tail -3 || echo "  (인터넷이 안 되면 건너뜁니다 — 실행에는 지장 없습니다)"
 fi
