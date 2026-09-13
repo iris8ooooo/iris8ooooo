@@ -97,7 +97,7 @@ else
     s['PRODUCT_NAME'] = '$(TARGET_NAME)'
     s['INFOPLIST_FILE'] = "#{WIDGET}/Info.plist"
     s['GENERATE_INFOPLIST_FILE'] = 'YES'
-    # 표시 이름(공수장부)은 GongsuWidget/Info.plist 에 둔다 — pbxproj 는 ASCII 로 유지.
+    # 표시 이름(kAppName 과 동일)은 GongsuWidget/Info.plist 에 둔다 — pbxproj 는 ASCII 로 유지.
     s['CODE_SIGN_ENTITLEMENTS'] = "#{WIDGET}/#{WIDGET}.entitlements"
     s['CODE_SIGN_STYLE'] = 'Automatic'
     s['CURRENT_PROJECT_VERSION'] = '$(FLUTTER_BUILD_NUMBER)'

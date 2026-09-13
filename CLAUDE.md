@@ -1,6 +1,7 @@
-# 공수장부 (가칭) — 현장 노동자용 공수 기록 Flutter 앱
+# 공수수첩 — 현장 노동자용 공수 기록 Flutter 앱
 
-> **이름 변경 필요 (2026-09-13 확인)**: "공수장부" 는 2026-08-25 다른 개발사(Seulki Eom, App ID 6804355580)가 App Store 에 이미 등록했다. App Store 목록 이름은 스토어 전체에서 유일해야 하므로 이 이름으로는 iOS 출시가 불가능하다. 새 이름은 오너가 정한다. 번들 ID(`com.gongsujangbu.*`)·App Group 은 사용자에게 보이지 않으므로 **바꾸지 않는다** — 표시 이름(Info.plist `CFBundleDisplayName`·`strings.xml` `app_name`)과 화면·문서 문구만 바꾼다. 이름이 박힌 파일 목록은 `grep -rl 공수장부` 로 20개.
+> **앱 이름: 공수수첩** (2026-09-13 오너 결정, 나중에 바뀔 수 있음). 이전 가칭 "공수장부" 는 2026-08-25 다른 개발사(Seulki Eom, App ID 6804355580)가 App Store 에 등록해 쓸 수 없게 됐다(목록 이름은 스토어 전체에서 유일). **App Store Connect 에서 "공수수첩" 예약이 되는지는 아직 확인 전** — 출시 전 오너가 새 앱 만들기 화면에서 입력해 확인한다.
+> **이름은 한 곳에서만 바꾼다**: `lib/app_info.dart` 의 `kAppName`(프로 상품명 `kProName` 은 파생) + 네이티브 4곳(`ios/Runner/Info.plist`·`ios/GongsuWidget/Info.plist` 의 CFBundleDisplayName, `android/.../strings.xml` 의 app_name, 위젯 Swift·Kotlin 문자열) + 문서·`tool/mac` 스크립트. Dart 코드는 상수만 쓴다. 동기화와 옛 이름 잔존은 `test/guards/app_name_guard_test.dart` 가 강제한다. 번들 ID(`com.gongsujangbu.*`)·App Group·패키지명·백업 태그(`GSJB1:`, `gongsu_ledger_backup`)는 사용자에게 보이지 않으므로 **바꾸지 않는다**.
 
 한 줄 정의: **광고 없고, 인터넷 없어도 되고, 기록이 절대 안 사라지는 공수달력.**
 타겟: 공수×단가로 급여를 계산하는 모든 현장 노동자 (건설 일용직, 조선소, 플랜트, 제조, 반도체, 인테리어 등).
@@ -206,7 +207,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 출시 후: 실기기 프로 결제·복원 검증(샌드박스), 위젯 프로 게이팅 UX 피드백, 스토어 심사 피드백 반영
 - 오너 개발 환경 수명: 맥이 인텔이라 **Xcode 26.6이 마지막**(27부터 애플 실리콘 전용), Flutter 도 인텔 지원 중단 예고. 두 버전을 올리지 말고 고정. 애플 실리콘 맥으로 옮기기 전까지 이 조합이 빌드 기준
 - 세금 정밀도(전체 점검에서 나온 것, 오너 결정 필요): 일용소득세 소액부징수를 '지급 건별'로 묶는 옵션(지금은 일별) / 월 60시간 미만·220만원 미만 국민연금 제외 규칙 / 같은 날 두 단가 이력의 우선순위(지금은 updatedAt 최신)
-- **출시 전 필수**: 앱 이름 변경(위 상단 참고). 후보는 App Store·Play 에서 중복 검색 후 확정. 이름 확정 시 표시 이름·화면 문구·문서·스토어 문안 일괄 교체
+- **출시 전 필수**: App Store Connect 에서 "공수수첩" 이름 예약 확인(웹 검색 1차 거름망은 통과, 후보 목록: 공수총무·한공수·공수지기·일한날·공수일지). 예약이 막히면 `kAppName` + 네이티브 4곳 + 문서만 바꾸면 된다
 - **CSV/엑셀 내보내기 (프로 후보)**: 정산 기간의 날짜별 공수·단가·금액·부가항목을 CSV 로. 경쟁앱 공통 기능화 중
 - **애플워치(M7/v1.1 후보, 우선순위 하향)**: 8년치 리뷰 564건에서 요청 0건. 오너가 원하면 베팅으로 진행하되 v1 출시·이름 변경·CSV 뒤로. 설계는 `gongsu_ledger/docs/DESIGN_APPLE_WATCH.md` 에 정리됨. Flutter 는 watchOS 미지원이라 네이티브 SwiftUI 타깃 + `WatchConnectivity`(App Group 은 기기 간 불가). 1단계 보기 전용(위젯 페이로드 재사용, 데이터 위험 0) → 2단계 손목 기록(워치는 DB 없이 큐만, `transferUserInfo` 보장 전달, uid upsert, 미전송 건수 항상 표시, 워치에서 삭제·수정 불가). 실기기 테스트에 유료 개발자 프로그램 필요. Wear OS 는 별건
 - 기술 부채: 스냅샷 gzip 인코딩을 UI isolate 밖으로(FakeAsync 테스트와 충돌해 보류) / `printing` 플러그인도 서비스 추상화 뒤로 / 온보딩 직군 변경을 `job_kind` 설정으로 전파 / 달력 날짜 셀 semantics 라벨 / iPad 지원 여부 결정(지금은 iPhone 전용 `TARGETED_DEVICE_FAMILY=1`) / `sqlite3_flutter_libs` 의존 정리

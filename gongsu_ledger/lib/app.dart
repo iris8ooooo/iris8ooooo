@@ -11,6 +11,7 @@ import 'ui/common/home_widget_syncer.dart';
 import 'ui/common/purchase_syncer.dart';
 import 'ui/common/snapshot_scheduler.dart';
 import 'ui/onboarding/onboarding_page.dart';
+import 'app_info.dart';
 
 class GongsuApp extends ConsumerWidget {
   const GongsuApp({super.key});
@@ -24,7 +25,7 @@ class GongsuApp extends ConsumerWidget {
     final seed = themeColorById(isPro ? appearance.themeColorId : 0).argb;
 
     return MaterialApp(
-      title: '공수장부',
+      title: kAppName,
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(Brightness.light, seedArgb: seed),
       darkTheme: buildAppTheme(Brightness.dark, seedArgb: seed),

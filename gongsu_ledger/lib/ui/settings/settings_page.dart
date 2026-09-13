@@ -99,7 +99,7 @@ class SettingsPage extends ConsumerWidget {
               isPro ? Icons.verified : Icons.workspace_premium,
               color: scheme.primary,
             ),
-            title: Text(isPro ? '프로 사용 중' : '공수장부 프로 · 한 번만 결제'),
+            title: Text(isPro ? '프로 사용 중' : '$kProName · 한 번만 결제'),
             subtitle: Text(
               isPro
                   ? 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 색'
@@ -170,7 +170,7 @@ class SettingsPage extends ConsumerWidget {
             trailing: const Icon(Icons.chevron_right),
             onTap: () => showLicensePage(
               context: context,
-              applicationName: '공수장부',
+              applicationName: kAppName,
               applicationVersion: kAppVersion,
             ),
           ),

@@ -21,8 +21,8 @@
 ## 2. 아이폰 (App Store)
 
 1. **App Store Connect** (https://appstoreconnect.apple.com) → 나의 앱 → **+** → 새로운 앱
-   - 플랫폼 iOS, 이름 `공수장부`, 기본 언어 한국어, 번들 ID `com.gongsujangbu.gongsuLedger` (Xcode에서 한 번 실행하면 목록에 생깁니다), SKU `gongsu-ledger`
-2. **앱 내 구입** → **+** → 비소모성 → 참조 이름 `공수장부 프로`, 제품 ID **`gongsu_pro`** (정확히), 가격 6,600원에 가장 가까운 티어, 현지화 이름/설명은 `STORE_LISTING.md`의 "앱 내 구입 상품"
+   - 플랫폼 iOS, 이름 `공수수첩`, 기본 언어 한국어, 번들 ID `com.gongsujangbu.gongsuLedger` (Xcode에서 한 번 실행하면 목록에 생깁니다), SKU `gongsu-ledger`
+2. **앱 내 구입** → **+** → 비소모성 → 참조 이름 `공수수첩 프로`, 제품 ID **`gongsu_pro`** (정확히), 가격 6,600원에 가장 가까운 티어, 현지화 이름/설명은 `STORE_LISTING.md`의 "앱 내 구입 상품"
    - 심사용 스크린샷: 설정 → 프로 화면 캡쳐
 3. **Xcode 서명**: `ios/Runner.xcworkspace` 열기 → Runner → Signing & Capabilities → Team을 개발자 계정으로. **GongsuWidget** 타깃도 같은 Team. App Groups `group.com.gongsujangbu.gongsuLedger`가 두 타깃 모두에 체크되어 있는지 확인
 4. **빌드 올리기**: 터미널에서
@@ -30,7 +30,7 @@
    cd gongsu_ledger
    flutter build ipa
    ```
-   끝나면 `build/ios/ipa/공수장부.ipa`(또는 gongsu_ledger.ipa)가 생깁니다. Mac의 **Transporter** 앱(앱스토어에서 무료 설치)을 열고 그 파일을 끌어다 놓고 "전송".
+   끝나면 `build/ios/ipa/공수수첩.ipa`(또는 gongsu_ledger.ipa)가 생깁니다. Mac의 **Transporter** 앱(앱스토어에서 무료 설치)을 열고 그 파일을 끌어다 놓고 "전송".
 5. **TestFlight**: App Store Connect → TestFlight 탭 → 방금 올린 빌드 → 본인 아이폰에 TestFlight 앱으로 설치해 실제 폰에서 확인. 프로 결제는 **샌드박스 테스터**(사용자 및 액세스 → Sandbox → 테스터 추가)로 무료 테스트
 6. **앱 정보** 채우기: `STORE_LISTING.md`의 설명·키워드·스크린샷·개인정보 설문(데이터 수집 안 함). 개인정보처리방침 URL 입력
 7. **심사 제출** → 보통 1~2일. 거절되면 이유가 메일로 오니 그대로 붙여 주시면 고칩니다
@@ -49,8 +49,8 @@
    flutter build appbundle
    ```
    → `build/app/outputs/bundle/release/app-release.aab`
-3. **Play Console** → 앱 만들기 → 이름 `공수장부`, 앱, 무료
-4. 왼쪽 **수익 창출 → 제품 → 인앱 상품** → 상품 만들기 → 제품 ID **`gongsu_pro`**, 이름 `공수장부 프로`, 가격 6,600원, 활성화
+3. **Play Console** → 앱 만들기 → 이름 `공수수첩`, 앱, 무료
+4. 왼쪽 **수익 창출 → 제품 → 인앱 상품** → 상품 만들기 → 제품 ID **`gongsu_pro`**, 이름 `공수수첩 프로`, 가격 6,600원, 활성화
 5. **정책 → 앱 콘텐츠**: 개인정보처리방침 URL, 광고 없음, 데이터 보안(수집 없음), 타겟층 18세 이상 성인(직업용) 등 설문
 6. **테스트 → 내부 테스트** → 새 버전 만들기 → aab 업로드 → 테스터(본인 구글 계정) 추가 → 링크로 갤럭시에 설치해 확인. 인앱 상품은 **라이선스 테스터**(설정 → 라이선스 테스트)로 무료 테스트
 7. **프로덕션** → 버전 만들기 → 같은 aab → 검토 후 출시 (첫 심사 며칠)

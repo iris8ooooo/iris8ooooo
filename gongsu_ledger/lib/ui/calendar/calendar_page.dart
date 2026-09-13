@@ -22,6 +22,7 @@ import '../sites/site_list_page.dart';
 import '../stats/stats_page.dart';
 import 'month_summary_card.dart';
 import 'month_view.dart';
+import '../../app_info.dart';
 
 /// 첫 화면: 월 달력 + 월 합계. 설치 → 앱 열기 → 바로 이 화면 (로그인 없음).
 class CalendarPage extends ConsumerStatefulWidget {
@@ -116,7 +117,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final monthAsync = ref.watch(monthEntriesProvider(ym));
     if (monthAsync.hasError) {
       return Scaffold(
-        appBar: AppBar(title: const Text('공수장부')),
+        appBar: AppBar(title: const Text(kAppName)),
         body: _DbErrorView(error: monthAsync.error!),
       );
     }

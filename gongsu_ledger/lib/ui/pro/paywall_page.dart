@@ -7,6 +7,7 @@ import '../../domain/pro_limits.dart';
 import '../../services/purchase_service.dart';
 import '../../state/pro_providers.dart';
 import '../../state/purchase_providers.dart';
+import '../../app_info.dart';
 
 /// 프로 안내·구매·복원 화면. 구독이 아닌 일회성 결제임을 분명히 한다.
 class PaywallPage extends ConsumerStatefulWidget {
@@ -162,7 +163,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage>
     final priceLabel = _price ?? proListPriceLabel;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('공수장부 프로')),
+      appBar: AppBar(title: const Text(kProName)),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [

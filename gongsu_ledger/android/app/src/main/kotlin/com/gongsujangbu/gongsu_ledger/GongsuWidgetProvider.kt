@@ -49,7 +49,7 @@ class GongsuWidgetProvider : HomeWidgetProvider() {
 
             if (locked) {
                 // 프로가 아닐 때: 숫자 대신 안내
-                views.setTextViewText(R.id.widget_month, "공수장부")
+                views.setTextViewText(R.id.widget_month, "공수수첩")
                 views.setTextViewText(R.id.widget_gongsu, "프로 전용")
                 views.setTextViewText(R.id.widget_days, "앱 → 설정 → 프로에서 켜요")
                 views.setViewVisibility(R.id.widget_money_label, View.GONE)
