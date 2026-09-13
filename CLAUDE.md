@@ -125,6 +125,8 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M5: 홈 위젯 (iOS/Android)** — 완료 (2026-09-02, 테스트 186개 그린. home_widget 0.9 + 서비스 추상화, 순수 페이로드 빌더(표시 문자열만), 값 변경 시에만 저장·갱신하는 HomeWidgetSyncer, iOS WidgetKit 확장 `ios/GongsuWidget`(xcodeproj 스크립트로 타깃 추가, App Group), Android AppWidgetProvider+RemoteViews 2×2. 네이티브 컴파일은 오너 Mac 첫 실행이 검증 게이트)
 - [x] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** — 완료 (2026-09-02, 테스트 207개 그린. shared_preferences 미러 + 설정 화면(글씨 3단계·화면 모드·주 시작 요일·테마 색), 온보딩 직군 선택(미수정 시드만 교체), in_app_purchase 비소모성 `gongsu_pro` + 페이월/복원 + 게이팅(PDF·위젯·업체 4개+·테마), 앱 아이콘 코드 생성, Android 서명 설정, 개인정보처리방침/스토어 문안/출시 가이드)
 
+- [x] **전체 점검 + 오너 맥 첫 실행 검증** — 2026-09-13. 4차원 리뷰 수정(PR #5) 병합 후, 오너의 **인텔 MacBook Pro 2019**(macOS 26.6.2, Xcode 26.6 Universal, Flutter 3.47.2 darwin-x64)에서 iPhone 17 Pro 시뮬레이터(iOS 26.5) 빌드·실행 성공. analyze 이슈 0, 테스트 217개 그린(스크린샷 생성기 2개는 SHOT_DIR 없으면 의도적 skip), **위젯 타깃 Swift 컴파일 통과**, CocoaPods·Signing·App Groups 오류 없음(SPM 빌드 확인). 발견된 실제 결함: pbxproj 빌드 단계 순서(Cycle inside Runner) → 스크립트·pbxproj·가드 테스트로 수정. **아직 화면에서 미확인**: 1.8공수 직접 입력, 홈 위젯 실제 추가(App Groups 런타임), 비행기 모드
+
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것. 실행 가이드: `gongsu_ledger/docs/RUN_GUIDE.md`(Mac·아이폰, M1~M6 체크리스트) / `RUN_GUIDE_WINDOWS.md`(Windows·갤럭시, APK 사이드로드·에뮬레이터 포함) / `RELEASE_GUIDE.md`(출시).
 
 ### M2에서 확정된 규칙
@@ -164,6 +166,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - **위젯은 계산하지 않는다.** `domain/widget_payload.dart`의 `buildWidgetPayload`가 월 정산(monthSettlementProvider — 월 카드와 같은 경로)에서 표시 문자열(월 라벨·공수·근무일·금액 라벨·금액·갱신 시각)을 만들고, `ui/common/home_widget_syncer.dart`가 표시 값이 바뀔 때만 저장+갱신 신호를 보낸다. 키 이름(`WidgetKeys`)은 `ios/GongsuWidget/GongsuWidget.swift`·`android/.../GongsuWidgetProvider.kt`와 동일해야 한다 — 바꾸면 세 곳 동시 수정
 - 금액 줄 규칙: 노무비·가산·공제로 실제 금액이 있을 때만(`hasPricedMoney`, 단가 없는 공수뿐이면 비움). 세금 방식이 설정된 업체가 하나라도 있으면 실수령(세후), 아니면 세전
 - 플러그인은 `services/home_widget_service.dart` 추상화 뒤(M4 규칙과 동일, 테스트는 가짜 주입). App Group `group.com.gongsujangbu.gongsuLedger`, iOS kind `GongsuWidget`, Android provider `GongsuWidgetProvider`
+- **Runner 빌드 단계 순서**: `Embed Foundation Extensions`(위젯 .appex 복사)는 반드시 `Thin Binary` **앞**이어야 한다. 뒤에 있으면 Xcode 가 `Cycle inside Runner` 로 빌드를 거부한다(.appex 복사 → Thin Binary → Runner.app/Info.plist → .appex 복사 순환, flutter/flutter#135056). xcodeproj 의 `new_copy_files_build_phase` 는 배열 끝에 붙이므로 스크립트가 `ensure_embed_before_thin_binary` 로 매번 정렬한다(재실행이 곧 복구 수단). 커밋된 pbxproj 의 순서는 `test/guards/ios_project_guard_test.dart` 가 고정 — SDK 버전 박힌 프레임워크 경로 부재도 같은 테스트에서 증명
 - iOS: 확장 타깃은 `tool/ios_add_widget_target.rb`(xcodeproj gem)로 Runner.xcodeproj에 추가 — 재실행 안전. pbxproj는 ASCII 유지(표시 이름은 Info.plist에), 프레임워크는 Swift import 자동 링크(SDK 버전 박힌 경로 금지), 버전은 Flutter Generated.xcconfig 승계(`MARKETING_VERSION=$(FLUTTER_BUILD_NAME)`). 배포 타깃 iOS 15, iOS 17 containerBackground 분기
 - Android: Glance 대신 `AppWidgetProvider`+RemoteViews (소형 1종엔 충분, Compose 컴파일러·의존성 없이 빌드 위험 최소). `updatePeriodMillis=0` — 주기 갱신 없이 앱이 값을 바꿀 때만 갱신. 앱/위젯 표시 이름은 `res/values/strings.xml`
 - 달 바뀜: 앱이 resumed될 때 현재 달로 재구독. 앱을 안 열면 위젯은 마지막 달 라벨("9월 공수")을 그대로 보여준다(라벨에 달이 있어 오해 없음)
@@ -187,6 +190,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 2027년 공휴일 대체공휴일 확정치 반영 / 2027.7 국민연금 기준소득 상한 개정치(매년 7월 갱신)
 - 저가 실기기(갤럭시 A 시리즈) `--profile` 콜드 스타트 측정을 마일스톤 완료 게이트로 (오너 실기기 확보 시)
 - 출시 후: 실기기 프로 결제·복원 검증(샌드박스), 위젯 프로 게이팅 UX 피드백, 스토어 심사 피드백 반영
+- 오너 개발 환경 수명: 맥이 인텔이라 **Xcode 26.6이 마지막**(27부터 애플 실리콘 전용), Flutter 도 인텔 지원 중단 예고. 두 버전을 올리지 말고 고정. 애플 실리콘 맥으로 옮기기 전까지 이 조합이 빌드 기준
 - 세금 정밀도(전체 점검에서 나온 것, 오너 결정 필요): 일용소득세 소액부징수를 '지급 건별'로 묶는 옵션(지금은 일별) / 월 60시간 미만·220만원 미만 국민연금 제외 규칙 / 같은 날 두 단가 이력의 우선순위(지금은 updatedAt 최신)
 - 기술 부채: 스냅샷 gzip 인코딩을 UI isolate 밖으로(FakeAsync 테스트와 충돌해 보류) / `printing` 플러그인도 서비스 추상화 뒤로 / 온보딩 직군 변경을 `job_kind` 설정으로 전파 / 달력 날짜 셀 semantics 라벨 / iPad 지원 여부 결정(지금은 iPhone 전용 `TARGETED_DEVICE_FAMILY=1`) / `sqlite3_flutter_libs` 의존 정리
 

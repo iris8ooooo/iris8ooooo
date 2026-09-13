@@ -8,6 +8,8 @@
 #   1. Runner 타깃에 App Group 엔타이틀먼트(Runner/Runner.entitlements) 연결
 #   2. GongsuWidget 앱 확장 타깃 생성 (Swift 소스, Info.plist, 엔타이틀먼트)
 #   3. Runner → GongsuWidget 의존성 + "Embed Foundation Extensions" 복사 단계
+#   4. 그 복사 단계를 "Thin Binary" 앞으로 정렬 (순서가 뒤집히면 Xcode 가
+#      "Cycle inside Runner" 로 빌드를 거부한다 — flutter/flutter#135056)
 require 'xcodeproj'
 
 # 컨테이너/CI 처럼 LANG 이 없는 환경에서도 pbxproj(UTF-8)를 읽을 수 있게.
@@ -34,6 +36,25 @@ end
 
 # iPhone 전용 — iPad 심사(2.1)에서 큰글씨 레이아웃 문제를 피한다. iPad 지원은 별도 결정.
 runner.build_configurations.each { |c| c.build_settings['TARGETED_DEVICE_FAMILY'] = '1' }
+
+# "Embed Foundation Extensions"(위젯 .appex 끼워넣기)는 반드시 "Thin Binary" 앞이어야 한다.
+# 뒤에 있으면: .appex 복사가 Thin Binary 를 기다리고, Thin Binary 는 Runner.app/Info.plist 를
+# 건드리고, 그 Info.plist 는 .appex 가 먼저 들어가야 만들어져서 → 순환. Xcode 가
+# "Cycle inside Runner; building could produce unreliable results." 로 빌드를 멈춘다.
+# xcodeproj 의 new_copy_files_build_phase 는 배열 끝에 붙이므로 여기서 다시 정렬한다.
+def ensure_embed_before_thin_binary(runner)
+  phases = runner.build_phases
+  embed = phases.find { |p| p.display_name == 'Embed Foundation Extensions' }
+  thin = phases.find { |p| p.display_name == 'Thin Binary' }
+  return unless embed && thin
+
+  embed_index = phases.index(embed)
+  thin_index = phases.index(thin)
+  return if embed_index < thin_index
+
+  phases.move(embed, thin_index)
+  puts 'Embed Foundation Extensions 단계를 Thin Binary 앞으로 이동'
+end
 
 def configure_widget_configs(project, widget)
   group = project.main_group[WIDGET] || project.main_group.new_group(WIDGET, WIDGET)
@@ -105,6 +126,9 @@ else
   configure_widget_configs(project, widget)
   puts "#{WIDGET} 타깃 추가"
 end
+
+# 타깃을 새로 만들었든 이미 있었든 항상 순서를 바로잡는다 (Xcode 가 뒤섞어 놓은 경우 포함).
+ensure_embed_before_thin_binary(runner)
 
 project.save
 puts "저장: #{PROJECT_PATH}"
