@@ -52,8 +52,9 @@ sudo gem install cocoapods
 cd ~/development
 git clone https://github.com/iris8ooooo/iris8ooooo.git gongsu-app
 cd gongsu-app
-git checkout claude/worker-timesheet-flutter-app-6pltoc
 ```
+
+완성된 코드는 `main` 에 들어 있고, clone 하면 자동으로 `main` 입니다. 따로 브랜치를 바꿀 필요가 없습니다.
 
 ## 5. 앱 준비
 
@@ -100,7 +101,7 @@ flutter run
 
 ```bash
 cd ~/development/gongsu-app
-git pull
+git pull origin main
 cd gongsu_ledger
 flutter pub get
 flutter run

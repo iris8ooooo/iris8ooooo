@@ -73,10 +73,11 @@ Flutter가 안드로이드용 부품을 연결할 때 필요합니다.
 cd C:\dev
 git clone https://github.com/iris8ooooo/iris8ooooo.git gongsu-app
 cd gongsu-app
-git checkout claude/worker-timesheet-flutter-app-6pltoc
 cd gongsu_ledger
 flutter pub get
 ```
+
+완성된 코드는 `main` 에 들어 있고, clone 하면 자동으로 `main` 입니다. 따로 브랜치를 바꿀 필요가 없습니다.
 
 ## 6. 갤럭시 준비 (처음 한 번만)
 
@@ -110,7 +111,7 @@ flutter run
 
 ```powershell
 cd C:\dev\gongsu-app
-git pull
+git pull origin main
 cd gongsu_ledger
 flutter pub get
 flutter run
