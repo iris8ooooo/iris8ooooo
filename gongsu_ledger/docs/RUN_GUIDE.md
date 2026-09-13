@@ -2,15 +2,48 @@
 
 이 문서는 개발 지식 없이 Mac에서 공수장부 앱을 직접 실행해 보는 방법입니다.
 Windows PC + 갤럭시는 `RUN_GUIDE_WINDOWS.md` 를 보세요 (체크리스트는 이 문서의 것을 같이 씁니다).
-처음 한 번만 1~5단계를 하면, 이후에는 6단계부터만 반복하면 됩니다.
+처음 한 번만 0~5단계를 하면, 이후에는 6단계부터만 반복하면 됩니다.
 
 ---
 
+## 0. 먼저 내 Mac 종류를 확인하세요 (인텔 / 애플 실리콘)
+
+**이걸 먼저 봐야 합니다.** Xcode 받는 곳과 Flutter 받는 주소가 달라집니다.
+
+화면 왼쪽 위  → **이 Mac에 관하여**를 열고 "칩" 또는 "프로세서" 줄을 보세요.
+
+| 표시 | 종류 | 1단계 | 3단계 |
+|---|---|---|---|
+| Apple M1 / M2 / M3 / M4 … | 애플 실리콘 | App Store 에서 Xcode | 주소에 `arm64_` 있는 것 |
+| Intel Core i5 / i7 / i9 … | **인텔** | **App Store 불가 — 아래 1-B** | 주소에 `arm64_` **없는** 것 |
+
+> 이미 확인된 환경: 인텔 MacBook Pro 2019(16형, Core i9), macOS 26.6.2,
+> Xcode 26.6, Flutter 3.47.2(darwin-x64), iPhone 17 Pro 시뮬레이터(iOS 26.5)에서
+> 빌드·실행·테스트 217개 모두 통과했습니다.
+
 ## 1. Xcode 설치 (약 30분~1시간, 처음 한 번만)
 
-1. Mac의 **App Store**를 열고 **Xcode**를 검색해 설치합니다 (무료, 용량이 커서 오래 걸립니다).
+### 1-A. 애플 실리콘 Mac
+
+1. **App Store**를 열고 **Xcode**를 검색해 설치합니다 (무료, 용량이 커서 오래 걸립니다).
 2. 설치가 끝나면 Xcode를 한 번 실행하고, 약관 동의와 추가 구성 요소 설치를 진행합니다.
 3. Xcode는 닫아도 됩니다.
+
+### 1-B. 인텔 Mac (App Store에 Xcode가 안 보입니다)
+
+App Store의 Xcode는 애플 실리콘만 지원하도록 바뀌어서, 인텔 Mac에서는 **검색해도 나오지 않습니다.** 애플 개발자 사이트에서 직접 받아야 합니다.
+
+1. <https://developer.apple.com/download/all/> 에 접속해 Apple ID로 로그인합니다 (무료 계정으로 충분합니다).
+2. 검색창에 `Xcode 26.6` 을 입력하고, **`Xcode_26.6_Universal.xip`** (약 2.8GB)을 받습니다.
+   - **"Apple silicon" 이라고 적힌 파일은 받으면 안 됩니다.** 반드시 **Universal**입니다.
+3. 받은 `.xip` 파일을 두 번 눌러 압축을 풉니다 (10~20분 걸립니다). 나온 `Xcode.app` 을 **응용 프로그램** 폴더로 끌어다 놓습니다.
+4. Xcode를 한 번 실행해 약관 동의와 추가 구성 요소 설치를 진행하고 닫습니다.
+5. 압축 파일(`.xip`)과 다운로드 폴더에 남은 `Xcode.app` 은 지워도 됩니다 (약 43GB 회수).
+
+> **인텔 Mac에서 Xcode를 업데이트하지 마세요.** Xcode 27부터는 애플 실리콘 전용이라
+> 인텔 Mac에 설치되지 않습니다. 26.6이 이 Mac에서 쓸 수 있는 마지막 버전입니다.
+> 같은 이유로 Flutter도 인텔 Mac 지원 중단을 예고했습니다(`flutter doctor` 에 경고가
+> 뜨지만 지금 버전은 정상 동작합니다). 새 Mac으로 옮길 때까지는 현재 버전을 유지하세요.
 
 ## 2. 터미널 열기
 
@@ -18,6 +51,10 @@ Windows PC + 갤럭시는 `RUN_GUIDE_WINDOWS.md` 를 보세요 (체크리스트�
 - 아래의 회색 상자 안 명령어들은 터미널에 **한 줄씩 복사해 붙여넣고 엔터**를 치면 됩니다.
 
 ## 3. Flutter 설치 (처음 한 번만)
+
+**0단계에서 확인한 Mac 종류에 맞는 것만 붙여넣으세요.** 주소가 다릅니다.
+
+**애플 실리콘 Mac (M1~M4):**
 
 ```bash
 mkdir -p ~/development
@@ -27,10 +64,18 @@ unzip -q flutter.zip
 echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zprofile
 ```
 
-> 참고: 2020년 이전의 인텔 Mac이라면 주소의 `arm64_`를 지운
-> `flutter_macos_3.47.2-stable.zip` 을 받으세요.
-> Mac 종류는 화면 왼쪽 위  → "이 Mac에 관하여"에서 칩이
-> "Apple M1/M2/M3/M4"면 arm64가 맞습니다.
+**인텔 Mac (Core i5/i7/i9):** 주소에 `arm64_` 가 없습니다.
+
+```bash
+mkdir -p ~/development
+cd ~/development
+curl -o flutter.zip https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.47.2-stable.zip
+unzip -q flutter.zip
+echo 'export PATH="$HOME/development/flutter/bin:$PATH"' >> ~/.zprofile
+```
+
+> 잘못된 것을 받으면 나중에 `flutter run` 이 "Bad CPU type" 류 오류로 멈춥니다.
+> 그때는 `rm -rf ~/development/flutter` 로 지우고 맞는 주소로 다시 받으면 됩니다.
 
 터미널을 완전히 종료했다가 다시 열고, 설치를 확인합니다:
 
@@ -52,8 +97,9 @@ sudo gem install cocoapods
 cd ~/development
 git clone https://github.com/iris8ooooo/iris8ooooo.git gongsu-app
 cd gongsu-app
-git checkout claude/worker-timesheet-flutter-app-6pltoc
 ```
+
+완성된 코드는 `main` 에 들어 있고, clone 하면 자동으로 `main` 입니다. 따로 브랜치를 바꿀 필요가 없습니다.
 
 ## 5. 앱 준비
 
@@ -100,11 +146,35 @@ flutter run
 
 ```bash
 cd ~/development/gongsu-app
-git pull
+git pull origin main
 cd gongsu_ledger
 flutter pub get
 flutter run
 ```
+
+---
+
+## 9. 빌드가 멈출 때 (실제로 겪은 것들)
+
+**`Error (Xcode): Cycle inside Runner; building could produce unreliable results.`**
+
+위젯(.appex)을 앱에 끼워 넣는 단계와 Flutter 의 `Thin Binary` 단계 순서가 뒤집히면 납니다. 저장소에는 이미 바로잡아 두었으니 최신 코드를 받으면(8번) 나지 않습니다. 그래도 났다면 Xcode 가 순서를 다시 섞은 것이므로, 아래를 실행하면 복구됩니다.
+
+```bash
+sudo gem install xcodeproj
+cd ~/development/gongsu-app/gongsu_ledger
+ruby tool/ios_add_widget_target.rb
+```
+
+`Embed Foundation Extensions 단계를 Thin Binary 앞으로 이동` 이라고 나오면 고쳐진 것입니다. 다시 `flutter run` 하세요.
+
+**빌드 중에 빨간 글씨가 수백 줄 쏟아질 때**
+
+`Failed to index parameter type: <WFMailSenderPickerParameter...>` 처럼 `WF`로 시작하는 줄이 잔뜩 나오는 건 macOS 의 단축어(Shortcuts) 시스템 로그이고 이 앱과 무관합니다. **오류가 아닙니다.** 진짜 실패는 맨 끝의 `Failed to build iOS app` 또는 `Error (Xcode):` 줄을 보면 됩니다.
+
+**`Bad CPU type in executable`**
+
+Mac 종류와 다른 Flutter 를 받은 경우입니다. 0단계를 다시 확인하고, `rm -rf ~/development/flutter` 후 3단계에서 맞는 주소로 다시 받으세요.
 
 ---
 
