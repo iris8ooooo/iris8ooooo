@@ -127,7 +127,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 
 - [x] **전체 점검 + 오너 맥 첫 실행 검증** — 2026-09-13. 4차원 리뷰 수정(PR #5) 병합 후, 오너의 **인텔 MacBook Pro 2019**(macOS 26.6.2, Xcode 26.6 Universal, Flutter 3.47.2 darwin-x64)에서 iPhone 17 Pro 시뮬레이터(iOS 26.5) 빌드·실행 성공. analyze 이슈 0, 테스트 217개 그린(스크린샷 생성기 2개는 SHOT_DIR 없으면 의도적 skip), **위젯 타깃 Swift 컴파일 통과**, CocoaPods·Signing·App Groups 오류 없음(SPM 빌드 확인). 발견된 실제 결함: pbxproj 빌드 단계 순서(Cycle inside Runner) → 스크립트·pbxproj·가드 테스트로 수정. **아직 화면에서 미확인**: 1.8공수 직접 입력, 홈 위젯 실제 추가(App Groups 런타임), 비행기 모드
 
-각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것. 실행 가이드: `gongsu_ledger/docs/RUN_GUIDE.md`(Mac·아이폰, M1~M6 체크리스트) / `RUN_GUIDE_WINDOWS.md`(Windows·갤럭시, APK 사이드로드·에뮬레이터 포함) / `RELEASE_GUIDE.md`(출시).
+각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것. 오너는 터미널을 직접 치지 않아도 되게 **두 번 클릭 스크립트**를 유지한다: `gongsu_ledger/tool/mac/`(`run_simulator.command`·`run_iphone.command`·위젯 App Group 토글 2개). 실행 가이드: `gongsu_ledger/docs/RUN_GUIDE.md`(Mac·아이폰, M1~M6 체크리스트) / `RUN_GUIDE_WINDOWS.md`(Windows·갤럭시, APK 사이드로드·에뮬레이터 포함) / `RELEASE_GUIDE.md`(출시).
 
 ### M2에서 확정된 규칙
 - 단가는 기록에 저장하지 않는다. `SiteRateHistories`에서 "날짜 이하 가장 늦은 effectiveFrom" 행으로 조회 시점 해석 (`domain/rate_resolver.dart`). 기록별 `unitRateWonOverride`가 있으면 그것이 우선
@@ -170,6 +170,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - iOS: 확장 타깃은 `tool/ios_add_widget_target.rb`(xcodeproj gem)로 Runner.xcodeproj에 추가 — 재실행 안전. pbxproj는 ASCII 유지(표시 이름은 Info.plist에), 프레임워크는 Swift import 자동 링크(SDK 버전 박힌 경로 금지), 버전은 Flutter Generated.xcconfig 승계(`MARKETING_VERSION=$(FLUTTER_BUILD_NAME)`). 배포 타깃 iOS 15, iOS 17 containerBackground 분기
 - Android: Glance 대신 `AppWidgetProvider`+RemoteViews (소형 1종엔 충분, Compose 컴파일러·의존성 없이 빌드 위험 최소). `updatePeriodMillis=0` — 주기 갱신 없이 앱이 값을 바꿀 때만 갱신. 앱/위젯 표시 이름은 `res/values/strings.xml`
 - 달 바뀜: 앱이 resumed될 때 현재 달로 재구독. 앱을 안 열면 위젯은 마지막 달 라벨("9월 공수")을 그대로 보여준다(라벨에 달이 있어 오해 없음)
+- **실기기 위젯은 유료 계정 게이트**: 무료 Apple ID(Personal Team)는 App Groups 를 쓸 수 없어 실물 아이폰 설치가 `does not support the App Groups capability` 로 막힌다(시뮬레이터는 무관). 무료 계정으로 앱만 확인할 때는 `tool/mac/widget_off_for_free_account.command` → 되돌리기 `widget_on.command`(엔타이틀먼트 2개만 덮어쓰고 원본과 바이트 동일하게 복원 — 이 토글은 커밋하지 않는다). 무료 서명은 7일 만료이므로 실기기 상시 사용·TestFlight·IAP 샌드박스는 유료 프로그램 필요
 - 네이티브 코드(Swift/Kotlin)는 이 환경에서 컴파일 검증 불가 — 오너 Mac의 첫 `flutter run`이 검증 게이트. 위젯 프로 게이팅은 M6 IAP와 함께 넣는다(지금은 전원 사용)
 
 ### M6에서 확정된 규칙
