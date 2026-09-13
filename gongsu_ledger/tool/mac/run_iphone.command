@@ -20,11 +20,18 @@ if ! command -v flutter >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "[1/3] 준비 (flutter pub get)"
+echo "[0/4] 최신 코드 받기"
+if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+  echo "  내 Mac 에서 고친 파일이 있어 이번엔 건너뜁니다 (그대로 실행합니다)."
+else
+  git pull --ff-only origin main 2>&1 | tail -3 || echo "  (인터넷이 안 되면 건너뜁니다 — 실행에는 지장 없습니다)"
+fi
+echo
+echo "[1/4] 준비 (flutter pub get)"
 flutter pub get || { echo; echo "준비 단계 실패. 위 내용을 복사해 Claude 에게 보여 주세요."; read -r -p "엔터 " _; exit 1; }
 
 echo
-echo "[2/3] 연결된 아이폰 찾기"
+echo "[2/4] 연결된 아이폰 찾기"
 DEVICE_ID="$(flutter devices --machine 2>/dev/null | python3 -c '
 import json,sys
 try:
@@ -52,7 +59,7 @@ fi
 
 echo "  찾았습니다: $DEVICE_ID"
 echo
-echo "[3/3] 설치하고 실행 — 첫 설치는 몇 분 걸립니다."
+echo "[3/4] 설치하고 실행 — 첫 설치는 몇 분 걸립니다."
 echo "      끝낼 때는 이 창에서 q 를 누르세요 (앱은 아이폰에 남습니다)."
 echo
 flutter run -d "$DEVICE_ID"

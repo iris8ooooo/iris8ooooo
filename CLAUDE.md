@@ -125,7 +125,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - [x] **M5: 홈 위젯 (iOS/Android)** — 완료 (2026-09-02, 테스트 186개 그린. home_widget 0.9 + 서비스 추상화, 순수 페이로드 빌더(표시 문자열만), 값 변경 시에만 저장·갱신하는 HomeWidgetSyncer, iOS WidgetKit 확장 `ios/GongsuWidget`(xcodeproj 스크립트로 타깃 추가, App Group), Android AppWidgetProvider+RemoteViews 2×2. 네이티브 컴파일은 오너 Mac 첫 실행이 검증 게이트)
 - [x] **M6: 프로 IAP + 온보딩 + 큰글씨/다크모드 마감 + 스토어 출시 준비** — 완료 (2026-09-02, 테스트 207개 그린. shared_preferences 미러 + 설정 화면(글씨 3단계·화면 모드·주 시작 요일·테마 색), 온보딩 직군 선택(미수정 시드만 교체), in_app_purchase 비소모성 `gongsu_pro` + 페이월/복원 + 게이팅(PDF·위젯·업체 4개+·테마), 앱 아이콘 코드 생성, Android 서명 설정, 개인정보처리방침/스토어 문안/출시 가이드)
 
-- [x] **전체 점검 + 오너 맥 첫 실행 검증** — 2026-09-13. 4차원 리뷰 수정(PR #5) 병합 후, 오너의 **인텔 MacBook Pro 2019**(macOS 26.6.2, Xcode 26.6 Universal, Flutter 3.47.2 darwin-x64)에서 iPhone 17 Pro 시뮬레이터(iOS 26.5) 빌드·실행 성공. analyze 이슈 0, 테스트 217개 그린(스크린샷 생성기 2개는 SHOT_DIR 없으면 의도적 skip), **위젯 타깃 Swift 컴파일 통과**, CocoaPods·Signing·App Groups 오류 없음(SPM 빌드 확인). 발견된 실제 결함: pbxproj 빌드 단계 순서(Cycle inside Runner) → 스크립트·pbxproj·가드 테스트로 수정. **아직 화면에서 미확인**: 1.8공수 직접 입력, 홈 위젯 실제 추가(App Groups 런타임), 비행기 모드
+- [x] **전체 점검 + 오너 맥 첫 실행 검증** — 2026-09-13. 4차원 리뷰 수정(PR #5) 병합 후, 오너의 **인텔 MacBook Pro 2019**(macOS 26.6.2, Xcode 26.6 Universal, Flutter 3.47.2 darwin-x64)에서 iPhone 17 Pro 시뮬레이터(iOS 26.5) 빌드·실행 성공. analyze 이슈 0, 테스트 217개 그린(스크린샷 생성기 2개는 SHOT_DIR 없으면 의도적 skip), **위젯 타깃 Swift 컴파일 통과**, CocoaPods·Signing·App Groups 오류 없음(SPM 빌드 확인). 발견된 실제 결함: pbxproj 빌드 단계 순서(Cycle inside Runner) → 스크립트·pbxproj·가드 테스트로 수정. **아직 사람이 봐야 하는 것**: 홈 위젯 실제 추가(App Groups 런타임)뿐. 1.8공수는 키패드를 실제로 누르는 위젯 테스트가, 비행기 모드·광고 SDK 부재는 `test/guards/offline_guard_test.dart`(네트워크 호출 수단 없음·의존성에 광고/추적 패키지 없음·출시 매니페스트에 INTERNET 권한 없음)가 증명한다
 
 각 마일스톤 완료 시 시뮬레이터/실기기 확인 방법을 비개발자 눈높이로 안내할 것. 오너는 터미널을 직접 치지 않아도 되게 **두 번 클릭 스크립트**를 유지한다: `gongsu_ledger/tool/mac/`(`run_simulator.command`·`run_iphone.command`·위젯 App Group 토글 2개). 실행 가이드: `gongsu_ledger/docs/RUN_GUIDE.md`(Mac·아이폰, M1~M6 체크리스트) / `RUN_GUIDE_WINDOWS.md`(Windows·갤럭시, APK 사이드로드·에뮬레이터 포함) / `RELEASE_GUIDE.md`(출시).
 
@@ -199,6 +199,7 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 
 - 위젯 테스트에서 drift 스트림을 FakeAsync 안에서 직접 await(`watchX().first`)하면 이후 pumpWidget 언마운트가 영구 행업한다 — DB 검증은 `getRange` 같은 일반 쿼리 Future만 사용할 것
 - 위젯 테스트 끝에는 `unmountApp(tester)` 패턴(빈 위젯 pump + 가짜 시계 1초 진행)으로 drift 정리 타이머를 소진할 것
+- **오너 손을 덜자**: 사람이 손으로 확인해야 할 항목이 보이면 먼저 테스트로 증명할 수 없는지 본다(원칙 1·3은 `offline_guard_test`, iOS 빌드 구성은 `ios_project_guard_test`). 오너 확인은 "기계가 못 보는 것"만 남긴다 — 실행 가이드 맨 앞의 3가지
 
 ## 개발 명령어
 
