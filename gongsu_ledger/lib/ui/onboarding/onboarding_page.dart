@@ -6,6 +6,7 @@ import '../../data/seed/default_presets.dart';
 import '../../state/db_providers.dart';
 import '../../state/prefs_providers.dart';
 import '../../state/pro_providers.dart';
+import '../../app_info.dart';
 
 /// 첫 실행 온보딩: 직군 선택 → 기본 프리셋 세트. 로그인·회원가입 없음.
 ///
@@ -86,7 +87,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           children: [
             if (!widget.standalone) ...[
               Text(
-                '공수장부',
+                kAppName,
                 style: TextStyle(
                   fontSize: 34,
                   fontWeight: FontWeight.w900,

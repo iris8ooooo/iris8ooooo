@@ -14,6 +14,7 @@ import '../../domain/date_key.dart';
 import '../../domain/gongsu_value.dart';
 import '../../domain/korean_holidays.dart';
 import 'work_report_data.dart';
+import '../../app_info.dart';
 
 const List<String> _weekdays = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -50,7 +51,7 @@ Future<Uint8List> buildWorkReportPdf(
   final theme = pw.ThemeData.withFont(base: regular, bold: bold);
   final doc = pw.Document(
     title: '공수 확인서 ${_date(data.fromKey)}~${_date(data.toKey)}',
-    author: '공수장부',
+    author: kAppName,
     theme: theme,
   );
   final money = data.hasMoney;
@@ -115,7 +116,7 @@ Future<Uint8List> buildWorkReportPdf(
         mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
         children: [
           pw.Text(
-            '공수장부 앱에서 생성 · ${generatedAt.year}.${generatedAt.month.toString().padLeft(2, '0')}.${generatedAt.day.toString().padLeft(2, '0')} ${generatedAt.hour.toString().padLeft(2, '0')}:${generatedAt.minute.toString().padLeft(2, '0')}',
+            '$kAppName 앱에서 생성 · ${generatedAt.year}.${generatedAt.month.toString().padLeft(2, '0')}.${generatedAt.day.toString().padLeft(2, '0')} ${generatedAt.hour.toString().padLeft(2, '0')}:${generatedAt.minute.toString().padLeft(2, '0')}',
             style: pw.TextStyle(fontSize: 8, color: grey),
           ),
           pw.Text(

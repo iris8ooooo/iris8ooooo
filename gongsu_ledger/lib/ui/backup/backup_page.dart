@@ -12,6 +12,7 @@ import '../../data/backup/snapshot_service.dart';
 import '../../domain/date_key.dart';
 import '../../state/backup_providers.dart';
 import '../../state/db_providers.dart';
+import '../../app_info.dart';
 
 /// 백업/복원 — 절대 원칙 4의 3중 안전장치.
 /// (a) 자동 로컬 스냅샷 7일 (b) 텍스트 백업(복사→카톡 나에게 보내기→붙여넣기)
@@ -68,7 +69,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
           .read(shareServiceProvider)
           .shareText(
             encodeBackupText(json),
-            subject: '공수장부 백업 ${_todayStamp()}',
+            subject: '$kAppName 백업 ${_todayStamp()}',
           );
     } catch (e) {
       _showMessage('실패', '공유 창을 열지 못했어요.');
@@ -118,7 +119,10 @@ class _BackupPageState extends ConsumerState<BackupPage> {
     try {
       json = decodeBackupText(text);
     } on BackupFormatError {
-      _showMessage('복원 불가', '올바른 공수장부 백업이 아니에요.\n복사한 내용 전체를 그대로 넣었는지 확인해 주세요.');
+      _showMessage(
+        '복원 불가',
+        '올바른 $kAppName 백업이 아니에요.\n복사한 내용 전체를 그대로 넣었는지 확인해 주세요.',
+      );
       return;
     }
     final confirmed = await _confirm(
@@ -148,7 +152,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
         '이 백업은 더 새로운 버전의 앱에서 만든 것이에요.\n앱을 업데이트한 뒤 다시 복원해 주세요.',
       );
     } on BackupFormatError {
-      _showMessage('복원 불가', '올바른 공수장부 백업 데이터가 아니에요.');
+      _showMessage('복원 불가', '올바른 $kAppName 백업 데이터가 아니에요.');
     } catch (e) {
       _showMessage('실패', '복원 중 문제가 생겼어요. 데이터는 바뀌지 않았어요.');
     }

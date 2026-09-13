@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../../domain/tax_engine.dart';
 import '../db/app_database.dart';
 import '../repositories/day_item_repository.dart';
+import '../../app_info.dart';
 
 /// 간이 백업 코덱 (M1 안전망 — M4 정식 백업의 축소판, 같은 봉투 규약).
 ///
@@ -213,7 +214,7 @@ Future<ImportResult> importBackupJson(AppDatabase db, String json) async {
     throw BackupFormatError('봉투 형식이 아님');
   }
   if (decoded['format'] != backupFormatTag) {
-    throw BackupFormatError('공수장부 백업 데이터가 아님');
+    throw BackupFormatError('$kAppName 백업 데이터가 아님');
   }
   final version = decoded['schemaVersion'];
   if (version is! int) throw BackupFormatError('schemaVersion 없음');

@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'backup_codec.dart';
+import '../../app_info.dart';
 
 const String backupTextPrefix = 'GSJB1:';
 
@@ -24,7 +25,7 @@ String decodeBackupText(String text) {
   if (trimmed.startsWith('{')) return trimmed;
   final start = trimmed.indexOf(backupTextPrefix);
   if (start < 0) {
-    throw BackupFormatError('공수장부 백업 텍스트(GSJB1:)가 아님');
+    throw BackupFormatError('$kAppName 백업 텍스트(GSJB1:)가 아님');
   }
   // 메신저·키보드가 끼워 넣는 공백/줄바꿈/보이지 않는 문자(U+200B 등)를 전부
   // 걷어내고, 잘린 '=' 패딩은 normalize 로 되살린다.

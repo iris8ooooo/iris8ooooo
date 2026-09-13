@@ -1,6 +1,6 @@
 //
 //  GongsuWidget.swift
-//  공수장부 홈 위젯 (소형 1종): 이번 달 총 공수 + 예상 실수령액.
+//  공수수첩 홈 위젯 (소형 1종): 이번 달 총 공수 + 예상 실수령액.
 //
 //  값은 Flutter 쪽 HomeWidgetSyncer 가 App Group 의 UserDefaults 에 문자열로 저장해 둔
 //  것을 그대로 표시한다. 키 이름은 lib/domain/widget_payload.dart 의 WidgetKeys 와
@@ -68,7 +68,7 @@ struct GongsuWidgetView: View {
   /// 프로가 아닐 때: 숫자 대신 안내.
   private var lockedBody: some View {
     VStack(alignment: .leading, spacing: 6) {
-      Text("공수장부")
+      Text("공수수첩")
         .font(.system(size: 14, weight: .semibold))
         .foregroundColor(.secondary)
       Image(systemName: "lock.fill")
