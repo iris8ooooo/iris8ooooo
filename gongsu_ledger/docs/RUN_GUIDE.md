@@ -110,13 +110,14 @@ flutter pub get
 
 ## 6. 아이폰 시뮬레이터로 실행 (가장 쉬움)
 
+**두 번 클릭으로**: Finder 에서 `gongsu-app/gongsu_ledger/tool/mac/` 폴더를 열고 **`run_simulator.command`** 를 두 번 누르세요. 터미널이 열려 준비 → 시뮬레이터 켜기 → 실행까지 알아서 진행합니다.
+
+> 처음 두 번 누를 때 "확인되지 않은 개발자" 경고가 나오면, 파일을 **오른쪽 클릭 → 열기 → 열기** 를 누르면 됩니다. 한 번만 하면 다음부터는 그냥 두 번 클릭으로 열립니다.
+
+터미널에 직접 치고 싶다면:
+
 ```bash
 open -a Simulator
-```
-
-가상 아이폰 화면이 뜨면 (1분쯤 걸릴 수 있음):
-
-```bash
 cd ~/development/gongsu-app/gongsu_ledger
 flutter run
 ```
@@ -124,21 +125,40 @@ flutter run
 첫 실행은 몇 분 걸립니다. 시뮬레이터에 **공수장부 달력**이 뜨면 성공입니다.
 끝낼 때는 터미널에서 `q`를 누르세요.
 
-## 7. (선택) 실제 아이폰으로 실행
+## 7. 실제 아이폰에 설치해서 쓰기
 
-실기기는 애플 서명 절차가 필요해 한 단계가 더 있습니다:
+**두 번 클릭으로**: 아래 준비를 마친 뒤 `tool/mac/` 의 **`run_iphone.command`** 를 두 번 누르면 연결된 아이폰을 찾아 설치까지 합니다.
 
-1. 아이폰을 케이블로 Mac에 연결하고, 아이폰에서 "이 컴퓨터를 신뢰"를 누릅니다.
-2. 아이폰 설정 → 개인정보 보호 및 보안 → **개발자 모드**를 켜고 재부팅합니다.
-3. 터미널에서:
+### 7-1. 준비 (처음 한 번만)
+
+1. 아이폰을 케이블로 Mac 에 연결하고, 아이폰에서 **"이 컴퓨터를 신뢰"** 를 누릅니다.
+2. 아이폰 **설정 → 개인정보 보호 및 보안 → 개발자 모드**를 켜고 재부팅합니다.
+   (개발자 모드 항목은 Mac 에 한 번 연결한 뒤에 나타납니다)
+3. Xcode 로 서명 담당을 정해 줍니다.
    ```bash
    open ~/development/gongsu-app/gongsu_ledger/ios/Runner.xcworkspace
    ```
-4. Xcode가 열리면 왼쪽에서 **Runner**를 클릭 → 가운데 **Signing & Capabilities** 탭 →
-   **Team**에서 "Add an Account..."로 본인 Apple ID를 추가하고 선택합니다.
-5. 다시 터미널에서 `flutter run` — 기기 목록에서 본인 아이폰을 고릅니다.
-6. 아이폰에서 "신뢰하지 않는 개발자" 경고가 나오면:
-   설정 → 일반 → VPN 및 기기 관리 → 본인 Apple ID → 신뢰.
+   왼쪽 맨 위 **Runner** 클릭 → 가운데 **TARGETS** 목록에서 **Runner** 선택 → **Signing & Capabilities** 탭 → **Team** 에서 "Add an Account…" 로 본인 Apple ID 를 추가해 고릅니다. **같은 화면에서 TARGETS 의 `GongsuWidget` 도 같은 Team 으로** 골라 주세요.
+4. 아이폰에서 "신뢰하지 않는 개발자" 경고가 나오면
+   **설정 → 일반 → VPN 및 기기 관리 → 본인 Apple ID → 신뢰**.
+
+### 7-2. 무료 Apple ID 로 할 때 (돈 안 듦, 제약 있음)
+
+평소 쓰는 Apple ID 로 바로 됩니다. 단 두 가지 제약이 있습니다.
+
+- **7일 뒤 앱이 안 열립니다.** 무료 계정 서명은 7일만 유효합니다. 다시 `run_iphone.command` 를 눌러 재설치하면 계속 쓸 수 있습니다. **재설치·삭제 전에는 반드시 앱의 백업/복원에서 "백업 텍스트 복사" 를 해서 카톡 나에게 보내기로 보관하세요.** 재설치로 기록이 남는 경우가 많지만, 이 기록은 월급 증빙이니 운에 맡기지 않습니다. 아이폰에서 앱을 삭제하면 기록은 확실히 지워집니다.
+- **홈 위젯은 안 됩니다.** 무료 계정은 App Groups(앱과 위젯이 데이터를 나눠 보는 기능)를 쓸 수 없습니다. 그래서 설치가 `does not support the App Groups capability` 오류로 막힙니다. 위젯을 잠시 끄고 앱만 설치하려면 `tool/mac/` 의 **`widget_off_for_free_account.command`** 를 두 번 누른 뒤 다시 설치하세요. 앱 본체(달력·정산·백업·확인서)는 전부 정상이고, 위젯만 빈 값으로 보입니다. 유료 계정으로 바꾼 뒤에는 **`widget_on.command`** 로 되돌립니다.
+
+### 7-3. 유료 Apple Developer Program 으로 할 때 (권장)
+
+연 99 USD(약 13만 원)입니다. 스토어에 출시하려면 어차피 필요하고, 이걸 넣으면 제약이 사라집니다.
+
+- 서명이 **1년** 유효 — 7일마다 재설치할 필요 없음
+- **홈 위젯 정상 동작** (App Groups 사용 가능)
+- **TestFlight** 로 케이블 없이 아이폰에 설치 가능 — 가족·동료에게 테스트도 보낼 수 있음
+- **프로 결제(IAP) 실제 테스트** 가능 (샌드박스)
+
+가입은 <https://developer.apple.com/programs/enroll/> 이고, 가입 후 절차는 `docs/RELEASE_GUIDE.md` 에 있습니다. 일상적으로 폰에서 쓰실 거라면 이 경로가 맞습니다.
 
 ## 8. 나중에 새 버전 받기
 
@@ -252,7 +272,7 @@ Mac 종류와 다른 Flutter 를 받은 경우입니다. 0단계를 다시 확�
 - [ ] 시뮬레이터를 다크모드로 바꾸면(설정 → 디스플레이 및 밝기) 위젯 배경도 어두워진다
 - [ ] 단가가 하나도 없으면 금액 줄이 없고, 업체 관리에서 단가를 넣으면 금액 줄이 생긴다
 
-**실행이 "Signing" 또는 "App Groups" 오류로 멈추면**: `ios/Runner.xcworkspace`를 Xcode로 열기 → 왼쪽 맨 위 **Runner** 클릭 → 가운데 TARGETS에서 **Runner** → **Signing & Capabilities** 탭 → Team을 본인 Apple ID로 선택. 같은 화면에서 TARGETS의 **GongsuWidget**도 같은 Team으로 선택한 뒤 다시 `flutter run`. 시뮬레이터는 무료 Apple ID로 충분합니다. 실제 아이폰에서는 위젯의 App Groups 기능 때문에 유료 개발자 계정이 필요할 수 있어요 — M6 출시 준비 때 함께 처리합니다.
+**실행이 "Signing" 또는 "App Groups" 오류로 멈추면**: `ios/Runner.xcworkspace`를 Xcode로 열기 → 왼쪽 맨 위 **Runner** 클릭 → 가운데 TARGETS에서 **Runner** → **Signing & Capabilities** 탭 → Team을 본인 Apple ID로 선택. 같은 화면에서 TARGETS의 **GongsuWidget**도 같은 Team으로 선택한 뒤 다시 `flutter run`. 시뮬레이터는 무료 Apple ID로 충분합니다. **실제 아이폰에서 위젯까지 쓰려면 유료 Apple Developer Program 이 필요합니다** — 무료 계정은 App Groups 를 쓸 수 없어 설치 자체가 막힙니다. 7-2(무료, 위젯 끄고 앱만)와 7-3(유료, 전부)을 보세요.
 
 **갤럭시(안드로이드)에서 보려면**: Windows PC에 Flutter를 설치하고 USB로 연결해 `flutter run` (이 가이드는 Mac 기준이라, Windows용은 `RUN_GUIDE_WINDOWS.md`를 보세요). 홈 화면 길게 누르기 → **위젯** → **공수장부** → "이번 달 공수"(2×2)를 끌어다 놓기.
 
