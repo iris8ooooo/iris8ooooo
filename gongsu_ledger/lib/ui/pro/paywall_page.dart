@@ -8,6 +8,7 @@ import '../../services/purchase_service.dart';
 import '../../state/pro_providers.dart';
 import '../../state/purchase_providers.dart';
 import '../../app_info.dart';
+import '../common/app_icons.dart';
 
 /// 프로 안내·구매·복원 화면. 구독이 아닌 일회성 결제임을 분명히 한다.
 class PaywallPage extends ConsumerStatefulWidget {
@@ -200,7 +201,7 @@ class _PaywallPageState extends ConsumerState<PaywallPage>
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: Icon(
-                Icons.check_circle,
+                AppIcons.checkCircle,
                 color: isPro ? scheme.primary : scheme.onSurfaceVariant,
               ),
               title: Text(f.label),

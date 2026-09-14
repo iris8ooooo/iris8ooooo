@@ -15,6 +15,7 @@ import 'package:gongsu_ledger/services/home_widget_service.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 import 'package:gongsu_ledger/state/prefs_providers.dart';
 import 'package:gongsu_ledger/state/widget_providers.dart';
+import 'nav_helpers.dart';
 
 /// 가짜 위젯 서비스: 저장된 값과 갱신 횟수를 기록한다.
 class FakeHomeWidgetService implements HomeWidgetService {
@@ -122,10 +123,8 @@ void main() {
     final saves = widgetService.saves;
 
     // 화면만 다시 그린다 (값 변화 없음)
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tapAt(const Offset(10, 300));
-    await tester.pumpAndSettle();
+    await goTab(tester, 'settlement');
+    await goTab(tester, 'calendar');
 
     expect(widgetService.saves, saves);
     await unmountApp(tester);

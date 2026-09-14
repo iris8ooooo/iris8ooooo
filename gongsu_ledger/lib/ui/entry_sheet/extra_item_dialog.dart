@@ -4,6 +4,7 @@ import '../common/choice_chip_row.dart';
 
 import '../../data/repositories/day_item_repository.dart';
 import '../common/won_format.dart';
+import '../common/app_icons.dart';
 
 typedef ExtraItemInput = ({
   ExtraItemKind kind,
@@ -43,8 +44,8 @@ Future<ExtraItemInput?> showExtraItemDialog(BuildContext context) {
                       k == ExtraItemKind.allowance ? '가산 (+)' : '공제 (−)',
                   avatarOf: (k) => Icon(
                     k == ExtraItemKind.allowance
-                        ? Icons.add_circle_outline
-                        : Icons.remove_circle_outline,
+                        ? AppIcons.addCircle
+                        : AppIcons.remove,
                     size: 18,
                   ),
                   onSelected: (k) => setDialogState(() => kind = k),

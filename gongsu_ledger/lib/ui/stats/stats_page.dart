@@ -7,6 +7,8 @@ import '../../domain/stats.dart';
 import '../../state/site_providers.dart';
 import '../../state/tax_providers.dart';
 import '../common/won_format.dart';
+import '../home/ink_nav_bar.dart';
+import '../common/app_icons.dart';
 
 /// 통계 — 월별 추이, 연간 누적(연봉 뷰), 업체별 합산.
 /// 그래프는 외부 패키지 없이 막대(가로)로 그린다 — 큰글씨/다크모드에 안전.
@@ -28,6 +30,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('통계')),
+      bottomNavigationBar: const NavSpacer(),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -36,7 +39,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
             children: [
               IconButton(
                 tooltip: '이전 해',
-                icon: const Icon(Icons.chevron_left),
+                icon: const Icon(AppIcons.chevronLeft),
                 onPressed: () => setState(() => _year--),
               ),
               Text(
@@ -49,7 +52,7 @@ class _StatsPageState extends ConsumerState<StatsPage> {
               ),
               IconButton(
                 tooltip: '다음 해',
-                icon: const Icon(Icons.chevron_right),
+                icon: const Icon(AppIcons.chevronRight),
                 onPressed: () => setState(() => _year++),
               ),
             ],

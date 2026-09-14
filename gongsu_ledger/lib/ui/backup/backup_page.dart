@@ -13,6 +13,7 @@ import '../../domain/date_key.dart';
 import '../../state/backup_providers.dart';
 import '../../state/db_providers.dart';
 import '../../app_info.dart';
+import '../common/app_icons.dart';
 
 /// 백업/복원 — 절대 원칙 4의 3중 안전장치.
 /// (a) 자동 로컬 스냅샷 7일 (b) 텍스트 백업(복사→카톡 나에게 보내기→붙여넣기)
@@ -251,14 +252,14 @@ class _BackupPageState extends ConsumerState<BackupPage> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const ValueKey('copy-text-backup'),
-                icon: const Icon(Icons.copy),
+                icon: const Icon(AppIcons.copy),
                 label: const Text('백업 텍스트 복사'),
                 onPressed: _busy ? null : _copyText,
               ),
               const SizedBox(height: 6),
               OutlinedButton.icon(
                 key: const ValueKey('share-text-backup'),
-                icon: const Icon(Icons.share),
+                icon: const Icon(AppIcons.share),
                 label: const Text('바로 공유 (카톡 등)'),
                 onPressed: _busy ? null : _shareText,
               ),
@@ -285,7 +286,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
               const SizedBox(height: 12),
               FilledButton.icon(
                 key: const ValueKey('restore-button'),
-                icon: const Icon(Icons.restore),
+                icon: const Icon(AppIcons.restore),
                 label: const Text('병합 복원'),
                 onPressed: _busy ? null : _importPasted,
               ),
@@ -305,7 +306,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       key: const ValueKey('export-file'),
-                      icon: const Icon(Icons.upload_file),
+                      icon: const Icon(AppIcons.importFile),
                       label: const Text('파일 내보내기'),
                       onPressed: _busy ? null : _exportFile,
                     ),
@@ -314,7 +315,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                   Expanded(
                     child: OutlinedButton.icon(
                       key: const ValueKey('import-file'),
-                      icon: const Icon(Icons.folder_open),
+                      icon: const Icon(AppIcons.folder),
                       label: const Text('파일 가져오기'),
                       onPressed: _busy ? null : _importFile,
                     ),
@@ -337,7 +338,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                 alignment: Alignment.centerLeft,
                 child: TextButton.icon(
                   key: const ValueKey('open-trash'),
-                  icon: const Icon(Icons.restore_from_trash_outlined),
+                  icon: const Icon(AppIcons.restore),
                   label: const Text('삭제된 기록 보기'),
                   onPressed: () => Navigator.of(
                     context,
@@ -362,7 +363,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
                             ListTile(
                               key: ValueKey('snapshot-tile-${s.dateKey}'),
                               contentPadding: EdgeInsets.zero,
-                              leading: const Icon(Icons.history),
+                              leading: const Icon(AppIcons.history),
                               title: Text(_formatDate(s.dateKey)),
                               subtitle: Text(_formatSize(s.sizeBytes)),
                               trailing: TextButton(
@@ -378,7 +379,7 @@ class _BackupPageState extends ConsumerState<BackupPage> {
               const SizedBox(height: 4),
               OutlinedButton.icon(
                 key: const ValueKey('snapshot-now'),
-                icon: const Icon(Icons.save_outlined),
+                icon: const Icon(AppIcons.save),
                 label: const Text('지금 스냅샷 만들기'),
                 onPressed: _busy ? null : _snapshotNow,
               ),

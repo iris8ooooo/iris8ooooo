@@ -6,13 +6,17 @@ import '../../domain/appearance.dart';
 import '../../domain/pro_limits.dart';
 import '../../state/appearance_providers.dart';
 import '../../state/pro_providers.dart';
+import '../backup/backup_page.dart';
 import '../backup/trash_page.dart';
+import '../home/ink_nav_bar.dart';
+import '../sites/site_list_page.dart';
 import '../onboarding/onboarding_page.dart';
 import '../presets/preset_list_page.dart';
 import '../pro/paywall_page.dart';
 import '../pro/pro_gate.dart';
 import 'privacy_page.dart';
 import 'tax_rates_page.dart';
+import '../common/app_icons.dart';
 
 /// 설정: 화면(큰글씨·화면 모드·주 시작 요일·테마 색), 프로, 프리셋, 정산, 앱 정보.
 class SettingsPage extends ConsumerWidget {
@@ -27,6 +31,7 @@ class SettingsPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
+      bottomNavigationBar: const NavSpacer(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
         children: [
@@ -96,7 +101,7 @@ class SettingsPage extends ConsumerWidget {
           ListTile(
             key: const ValueKey('pro-tile'),
             leading: Icon(
-              isPro ? Icons.verified : Icons.workspace_premium,
+              isPro ? AppIcons.verified : AppIcons.pro,
               color: scheme.primary,
             ),
             title: Text(isPro ? '프로 사용 중' : '$kProName · 한 번만 결제'),
@@ -105,17 +110,26 @@ class SettingsPage extends ConsumerWidget {
                   ? 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 색'
                   : 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 색 (구독 아님)',
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const PaywallPage())),
           ),
           _SectionTitle('기록'),
           ListTile(
+            key: const ValueKey('sites'),
+            leading: const Icon(AppIcons.sites),
+            title: const Text('업체(현장) 관리'),
+            subtitle: const Text('이름 · 단가 · 색 · 세금 방식'),
+            trailing: const Icon(AppIcons.chevronRight),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const SiteListPage())),
+          ),
+          ListTile(
             key: const ValueKey('trash'),
-            leading: const Icon(Icons.restore_from_trash_outlined),
+            leading: const Icon(AppIcons.restore),
             title: const Text('삭제된 기록 되살리기'),
             subtitle: const Text('지운 공수·부가항목은 여기 남아 있어요'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () =>
                 Navigator.of(context)
                     .push(MaterialPageRoute(builder: (_) => const TrashPage())),
@@ -123,10 +137,10 @@ class SettingsPage extends ConsumerWidget {
           _SectionTitle('공수 버튼(프리셋)'),
           ListTile(
             key: const ValueKey('job-presets'),
-            leading: const Icon(Icons.engineering),
+            leading: const Icon(AppIcons.job),
             title: const Text('직군 프리셋 다시 고르기'),
             subtitle: const Text('건설 · 조선소 기본 세트. 직접 고친 것은 그대로'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => const OnboardingPage(standalone: true),
@@ -134,40 +148,52 @@ class SettingsPage extends ConsumerWidget {
             ),
           ),
           ListTile(
-            leading: const Icon(Icons.tune),
+            key: const ValueKey('presets'),
+            leading: const Icon(AppIcons.presets),
             title: const Text('프리셋 관리'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const PresetListPage())),
           ),
           _SectionTitle('정산'),
           ListTile(
-            leading: const Icon(Icons.percent),
+            key: const ValueKey('tax'),
+            leading: const Icon(AppIcons.percent),
             title: const Text('세금 · 요율 설정'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const TaxRatesPage())),
           ),
+          _SectionTitle('백업'),
+          ListTile(
+            key: const ValueKey('backup'),
+            leading: const Icon(AppIcons.backup),
+            title: const Text('백업 / 복원'),
+            subtitle: const Text('텍스트 · 파일 · 자동 스냅샷'),
+            trailing: const Icon(AppIcons.chevronRight),
+            onTap: () => Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const BackupPage())),
+          ),
           _SectionTitle('앱 정보'),
           ListTile(
-            leading: const Icon(Icons.info_outline),
+            leading: const Icon(AppIcons.info),
             title: const Text('버전'),
             trailing: Text(kAppVersion, style: const TextStyle(fontSize: 16)),
           ),
           ListTile(
             key: const ValueKey('privacy'),
-            leading: const Icon(Icons.privacy_tip_outlined),
+            leading: const Icon(AppIcons.privacy),
             title: const Text('개인정보처리방침'),
             subtitle: const Text('수집하는 정보 없음 · 서버 없음'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => Navigator.of(context)
                 .push(MaterialPageRoute(builder: (_) => const PrivacyPage())),
           ),
           ListTile(
-            leading: const Icon(Icons.description_outlined),
+            leading: const Icon(AppIcons.document),
             title: const Text('오픈소스 라이선스'),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(AppIcons.chevronRight),
             onTap: () => showLicensePage(
               context: context,
               applicationName: kAppName,
@@ -275,7 +301,7 @@ class _ColorDot extends StatelessWidget {
               width: 3,
             ),
           ),
-          child: selected ? const Icon(Icons.check, color: Colors.white) : null,
+          child: selected ? const Icon(AppIcons.check, color: Colors.white) : null,
         ),
       ),
     );

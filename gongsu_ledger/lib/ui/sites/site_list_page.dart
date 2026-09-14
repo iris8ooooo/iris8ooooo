@@ -13,6 +13,7 @@ import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../common/won_format.dart';
 import 'site_edit_page.dart';
+import '../common/app_icons.dart';
 
 /// 업체(현장) 관리: 추가 / 수정 / 단가 이력 / 순서 / 보관.
 class SiteListPage extends ConsumerWidget {
@@ -65,7 +66,7 @@ class SiteListPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('업체(현장) 관리')),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
+        icon: const Icon(AppIcons.add),
         label: const Text('업체 추가'),
         onPressed: () async {
           if (!sitesAsync.hasValue) return; // 목록이 오기 전엔 판정하지 않는다
@@ -137,14 +138,14 @@ class SiteListPage extends ConsumerWidget {
                     children: [
                       IconButton(
                         tooltip: '삭제',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(AppIcons.delete),
                         onPressed: () => _confirmArchive(context, ref, site),
                       ),
                       ReorderableDragStartListener(
                         index: index,
                         child: const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.drag_handle),
+                          child: Icon(AppIcons.dragHandle),
                         ),
                       ),
                     ],

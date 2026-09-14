@@ -199,6 +199,18 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - 앱 표시 버전은 `lib/app_info.dart` 상수 — pubspec `version`과 일치를 테스트로 고정. 아이콘은 `test/screenshots/app_icon_test.dart`(ICON_OUT=1)로 생성 후 `dart run flutter_launcher_icons`
 - Android 릴리스 서명은 `android/key.properties`(git 제외) 있을 때만 release 키, 없으면 debug 키로 폴백(`flutter run --release` 가능). 출시 절차·스토어 문안·개인정보처리방침은 `docs/RELEASE_GUIDE.md`·`STORE_LISTING.md`·`PRIVACY_POLICY.md`(앱 내 `privacy_text.dart`와 동일 유지)
 
+### 디자인 확정 — "잉크 달력" (2026-09-14 오너 결정, 시안 9안 중 G)
+
+캔버스(구현 기준): https://claude.ai/code/artifact/2e915cc1-2d05-49e4-bc7d-9e9dfa173ff4 — "확정안 · G 잉크 달력" 페이지. 결정: 잉크 달력 · 칸 4번(잉크 농도) · 하단 탭 2번(떠 있는 알약) · 홈 아이콘 5번(잉크 격자). 배경: 오너가 1·2차 시안(A~F, 평면 UI 변주)을 모두 거절 → 3차에서 "한 벌"(홈+아이콘+팔레트+글꼴+앱 안 아이콘)로 제시해 G 채택.
+
+- **토큰은 `lib/ui/app_theme.dart` 의 `AppColors`(ThemeExtension) 한 곳**: 종이 `#FBFAF7` · 잉크 `#1B2A4A` · 보조 글자 `#6F7787` · 선 `#E4E1DA` · 공휴일·일요일·공제 빨강 `#C0392B` · 토요일 파랑 `#4A6FA5` · 오늘 금색 `#C9A227` · 공수 농도 4단계 `#E6EAF2/#C5CFE1/#94A6C8/#55699A`(`tintForCenti`: ≤0.5/≤1/≤1.5/초과, 마지막 단계는 흰 글자). 다크는 같은 토큰의 어두운 값(`AppColors.dark`). 화면 코드는 `context.colors.xxx` 로만 색을 쓴다 — 색은 뜻이 있을 때만(장식색 0)
+- **칩 라벨은 평범한 TextStyle**: Flutter `Chip` 은 `chipTheme.labelStyle` 을 상태 해석 없이 merge 만 하므로 `WidgetStateTextStyle` 을 주면 글자가 □ 로 깨진다. 기본은 `labelStyle`, 선택된 ChoiceChip 은 `secondaryLabelStyle`(흰 글자) — 두 벌을 따로 둔다
+- **테마 색(프로) = 잉크 색**: `themeColorOptions` id 0 남색(무료) · 숲·자두·벽돌·먹(프로). 기본 남색이면 농도는 시안 값 그대로, 다른 잉크면 종이↔잉크 보간(`AppColors.light`)
+- **글꼴**: 본문·숫자 Pretendard 4굵기(400/500/700/800, OFL, KS X 1001 한글 2,350자 + 기호로 서브셋 ≈ 480KB/굵기) + 월 이름·화면 제목만 Song Myung(OFL, 제목 글자만 서브셋 69KB, `AppFonts.displayStyle`, 없는 글자는 Pretendard 폴백). 나눔고딕은 PDF 전용. 서브셋 도구는 fontTools(pyftsubset) — 글꼴에 없는 글자를 제목에 쓰면 폴백되므로 제목 문구를 바꾸면 서브셋에 글자를 추가한다
+- **앱 안 아이콘 = Phosphor 한 벌** (`lib/ui/common/app_icons.dart`, 글꼴 `assets/fonts/Phosphor-Regular.ttf`·`Phosphor-Fill.ttf` 내장, MIT). `phosphor_flutter` 패키지는 Flutter 3.47 에서 컴파일되지 않아(IconData final) 쓰지 않는다. Material `Icons.` 직접 사용 금지 — `test/guards/app_icons_guard_test.dart` 가 코드포인트 존재와 함께 강제
+- **홈 = `ui/home/home_shell.dart`**: 탭 4개(달력·정산·통계·설정) + 떠 있는 알약 탭(`InkNavBar`, 화면 아래 18px, 켜진 탭은 옅은 잉크 바탕 + 채운 아이콘). 탭 화면은 `bottomNavigationBar: NavSpacer()` 로 알약 자리를 비워 둔다. 안 연 탭은 만들지 않는다(콜드 스타트). 옛 ⋮ 메뉴 항목(업체·프리셋·백업·세율)은 설정 화면 줄로 이동(키 `sites`·`presets`·`backup`·`tax`). 테스트는 `test/ui/nav_helpers.dart` 의 `openMenu`/`goTab`/`back` 만 쓴다
+- 진행: PR 1(토대: 글꼴·토큰·아이콘·탭) 완료 → PR 2 달력 홈(농도 칸·공휴일 이름·금색 오늘·범례) → PR 3 입력 시트 → PR 4 나머지 화면 + 앱 아이콘(잉크 격자) + 스토어 스크린샷
+
 ## 백로그
 
 - 최근 커스텀 입력값을 프리셋 그리드 끝에 임시 칩으로 노출 (설계 심사 graft 제안)

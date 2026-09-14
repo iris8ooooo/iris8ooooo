@@ -21,6 +21,8 @@ import 'package:gongsu_ledger/ui/export/report_export_page.dart';
 import 'package:gongsu_ledger/ui/onboarding/onboarding_page.dart';
 import 'package:gongsu_ledger/ui/pro/paywall_page.dart';
 import 'package:gongsu_ledger/ui/sites/site_edit_page.dart';
+import 'nav_helpers.dart';
+import 'package:gongsu_ledger/ui/settings/settings_page.dart';
 
 class FakePurchaseService implements PurchaseService {
   final _controller = StreamController<PurchaseOutcome>.broadcast();
@@ -109,17 +111,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  Future<void> openMenu(WidgetTester tester, String item) async {
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(item));
-    await tester.pumpAndSettle();
-  }
 
-  Future<void> back(WidgetTester tester) async {
-    await tester.tap(find.byType(BackButton).first);
-    await tester.pumpAndSettle();
-  }
 
   Future<void> scrollTo(WidgetTester tester, Finder finder) async {
     await tester.scrollUntilVisible(
@@ -165,7 +157,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('onboard-shipyard')));
       await tester.pumpAndSettle();
-      expect(find.text('설정'), findsOneWidget); // 설정으로 돌아옴
+      expect(find.byType(SettingsPage), findsOneWidget); // 설정으로 돌아옴
       final names = (await db.presetDao.getActive()).map((p) => p.name);
       expect(names, contains('E잔업'));
       await unmountApp(tester);
@@ -203,7 +195,7 @@ void main() {
       await openMenu(tester, '설정');
       await tester.tap(find.byKey(const ValueKey('screen-mode-dark')));
       await tester.pumpAndSettle();
-      final context = tester.element(find.text('설정'));
+      final context = tester.element(find.byType(SettingsPage));
       expect(Theme.of(context).brightness, Brightness.dark);
       expect(prefs.getString('screen_mode'), 'dark');
       await unmountApp(tester);

@@ -14,6 +14,7 @@ import '../../domain/tax_engine.dart';
 import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../common/won_format.dart';
+import '../common/app_icons.dart';
 
 /// 업체 추가/수정 + 단가 이력 관리.
 class SiteEditPage extends ConsumerStatefulWidget {
@@ -146,7 +147,7 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                trailing: const Icon(Icons.calendar_month),
+                trailing: const Icon(AppIcons.calendar),
                 onTap: () async {
                   final picked = await showDatePicker(
                     context: dialogContext,
@@ -311,7 +312,7 @@ class _SiteEditPageState extends ConsumerState<SiteEditPage> {
                     ),
                     child: _colorId == entry.id
                         ? Icon(
-                            Icons.check,
+                            AppIcons.check,
                             color:
                                 Theme.of(context).brightness == Brightness.dark
                                 ? Colors.black
@@ -396,7 +397,7 @@ class _RateHistorySection extends ConsumerWidget {
             ),
             FilledButton.tonalIcon(
               key: const ValueKey('add-rate'),
-              icon: const Icon(Icons.add),
+              icon: const Icon(AppIcons.add),
               label: const Text('단가 변경'),
               onPressed: onAdd,
             ),
@@ -427,7 +428,7 @@ class _RateHistorySection extends ConsumerWidget {
               onTap: () => onEdit(rate),
               trailing: IconButton(
                 tooltip: '이력 삭제',
-                icon: const Icon(Icons.delete_outline),
+                icon: const Icon(AppIcons.delete),
                 onPressed: () => onDelete(rate),
               ),
             ),

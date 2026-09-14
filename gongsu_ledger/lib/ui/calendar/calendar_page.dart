@@ -13,16 +13,11 @@ import '../../domain/month_grid.dart';
 import '../../state/appearance_providers.dart';
 import '../../state/backup_providers.dart';
 import '../../state/calendar_providers.dart';
-import '../backup/backup_page.dart';
-import '../presets/preset_list_page.dart';
-import '../settings/settings_page.dart';
-import '../settings/tax_rates_page.dart';
-import '../settlement/settlement_page.dart';
-import '../sites/site_list_page.dart';
-import '../stats/stats_page.dart';
+import '../home/ink_nav_bar.dart';
 import 'month_summary_card.dart';
 import 'month_view.dart';
 import '../../app_info.dart';
+import '../common/app_icons.dart';
 
 /// 첫 화면: 월 달력 + 월 합계. 설치 → 앱 열기 → 바로 이 화면 (로그인 없음).
 class CalendarPage extends ConsumerStatefulWidget {
@@ -132,60 +127,17 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
           IconButton(
             key: const ValueKey('capture-share'),
             tooltip: '달력 이미지 공유',
-            icon: const Icon(Icons.ios_share),
+            icon: const Icon(AppIcons.share),
             onPressed: _shareCapture,
           ),
           IconButton(
             tooltip: '오늘로 이동',
-            icon: const Icon(Icons.today),
+            icon: const Icon(AppIcons.today),
             onPressed: () => _goToMonth(ymOfDateKey(dateKeyOf(DateTime.now()))),
-          ),
-          PopupMenuButton<String>(
-            tooltip: '메뉴',
-            onSelected: (value) {
-              switch (value) {
-                case 'settlement':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettlementPage()),
-                  );
-                case 'stats':
-                  Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (_) => const StatsPage()));
-                case 'tax':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const TaxRatesPage()),
-                  );
-                case 'sites':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SiteListPage()),
-                  );
-                case 'presets':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const PresetListPage()),
-                  );
-                case 'backup':
-                  Navigator.of(
-                    context,
-                  ).push(MaterialPageRoute(builder: (_) => const BackupPage()));
-                case 'settings':
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const SettingsPage()),
-                  );
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'settlement', child: Text('정산 (기간 지정)')),
-              PopupMenuItem(value: 'stats', child: Text('통계')),
-              PopupMenuItem(value: 'sites', child: Text('업체(현장) 관리')),
-              PopupMenuItem(value: 'presets', child: Text('프리셋 관리')),
-              PopupMenuItem(value: 'backup', child: Text('백업 / 복원')),
-              PopupMenuItem(value: 'tax', child: Text('세금 · 요율 설정')),
-              PopupMenuItem(value: 'settings', child: Text('설정')),
-            ],
           ),
         ],
       ),
+      bottomNavigationBar: const NavSpacer(),
       body: SafeArea(
         child: RepaintBoundary(
           key: _captureKey,
@@ -303,7 +255,7 @@ class _DbErrorViewState extends ConsumerState<_DbErrorView> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isDowngrade ? Icons.system_update : Icons.error_outline,
+              isDowngrade ? AppIcons.update : AppIcons.error,
               size: 56,
               color: scheme.primary,
             ),

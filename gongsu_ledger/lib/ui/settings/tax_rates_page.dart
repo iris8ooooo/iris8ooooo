@@ -10,6 +10,7 @@ import '../../domain/tax_rates.dart';
 import '../../state/db_providers.dart';
 import '../../state/tax_providers.dart';
 import '../common/won_format.dart';
+import '../common/app_icons.dart';
 
 /// 세율·보험료율 설정. 연도별 기본 테이블을 보여주고 항목별로 직접 고칠 수
 /// 있다 (경쟁앱 불만: 요율 갱신이 늦음). 끝전 처리 방식도 여기서.
@@ -186,7 +187,7 @@ class _TaxRatesPageState extends ConsumerState<TaxRatesPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left),
+                icon: const Icon(AppIcons.chevronLeft),
                 onPressed: () => setState(() => _year--),
               ),
               Text(
@@ -198,7 +199,7 @@ class _TaxRatesPageState extends ConsumerState<TaxRatesPage> {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right),
+                icon: const Icon(AppIcons.chevronRight),
                 onPressed: () => setState(() => _year++),
               ),
             ],
@@ -226,7 +227,7 @@ class _TaxRatesPageState extends ConsumerState<TaxRatesPage> {
                   if (table.valueOf(key) != defaults.valueOf(key))
                     Padding(
                       padding: const EdgeInsets.only(right: 6),
-                      child: Icon(Icons.edit, size: 16, color: scheme.primary),
+                      child: Icon(AppIcons.edit, size: 16, color: scheme.primary),
                     ),
                   Text(
                     key.kind == TaxRateFieldKind.percent

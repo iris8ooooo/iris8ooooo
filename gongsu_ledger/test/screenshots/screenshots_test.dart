@@ -3,7 +3,7 @@
 //   flutter test test/screenshots/screenshots_test.dart --dart-define=SHOT_DIR=/절대/경로
 //
 // SHOT_DIR이 없으면 건너뛰므로 일반 `flutter test`에는 영향이 없다.
-// 위젯 테스트 환경은 글꼴이 없어 네모로 그려지므로 나눔고딕·머티리얼 아이콘을 직접 올린다.
+// 위젯 테스트 환경은 글꼴이 없어 네모로 그려지므로 앱 글꼴(Pretendard·Song Myung·Phosphor)을 직접 올린다.
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -34,12 +34,13 @@ import 'package:gongsu_ledger/state/site_providers.dart';
 import 'package:gongsu_ledger/state/tax_providers.dart';
 import 'package:gongsu_ledger/ui/app_theme.dart';
 import 'package:gongsu_ledger/ui/calendar/calendar_page.dart';
+import 'package:gongsu_ledger/ui/home/home_shell.dart';
 import 'package:gongsu_ledger/ui/onboarding/onboarding_page.dart';
 import 'package:gongsu_ledger/ui/pro/paywall_page.dart';
 import 'package:pdf/widgets.dart' as pw;
+import '../ui/nav_helpers.dart';
 
 const String shotDir = String.fromEnvironment('SHOT_DIR');
-const String _font = 'NanumGothic';
 
 void main() {
   driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;
@@ -54,46 +55,29 @@ void main() {
     Directory(shotDir).createSync(recursive: true);
     ByteData bytesOf(String path) =>
         ByteData.sublistView(File(path).readAsBytesSync());
-    final nanum = FontLoader(_font)
-      ..addFont(Future.value(bytesOf('assets/fonts/NanumGothic-Regular.ttf')))
-      ..addFont(Future.value(bytesOf('assets/fonts/NanumGothic-Bold.ttf')));
-    await nanum.load();
-    // flutter_tester: <flutter>/bin/cache/artifacts/engine/linux-x64/flutter_tester
-    final artifacts = File(Platform.resolvedExecutable).parent.parent.parent;
-    final icons = File(
-      '${artifacts.path}/material_fonts/MaterialIcons-Regular.otf',
-    );
-    if (icons.existsSync()) {
-      final loader = FontLoader('MaterialIcons')
-        ..addFont(Future.value(bytesOf(icons.path)));
+    // pubspec 의 글꼴을 같은 가족 이름으로 올린다 — 앱과 똑같이 그려진다.
+    final fonts = <String, List<String>>{
+      'Pretendard': [
+        'assets/fonts/Pretendard-Regular.otf',
+        'assets/fonts/Pretendard-Medium.otf',
+        'assets/fonts/Pretendard-Bold.otf',
+        'assets/fonts/Pretendard-ExtraBold.otf',
+      ],
+      'SongMyung': ['assets/fonts/SongMyung-Regular.ttf'],
+      'PhosphorRegular': ['assets/fonts/Phosphor-Regular.ttf'],
+      'PhosphorFill': ['assets/fonts/Phosphor-Fill.ttf'],
+    };
+    for (final entry in fonts.entries) {
+      final loader = FontLoader(entry.key);
+      for (final path in entry.value) {
+        loader.addFont(Future.value(bytesOf(path)));
+      }
       await loader.load();
     }
   });
 
-  /// 앱 테마에 캡쳐용 글꼴을 입힌다 (테마 자체는 건드리지 않는다).
-  ThemeData shotTheme(Brightness b) {
-    final t = buildAppTheme(b);
-    TextStyle? fix(TextStyle? s) => s?.copyWith(fontFamily: _font);
-    WidgetStateProperty<TextStyle?>? fixProp(ButtonStyle? s) =>
-        WidgetStatePropertyAll(fix(s?.textStyle?.resolve({})));
-    return t.copyWith(
-      textTheme: t.textTheme.apply(fontFamily: _font),
-      primaryTextTheme: t.primaryTextTheme.apply(fontFamily: _font),
-      listTileTheme: t.listTileTheme.copyWith(
-        titleTextStyle: fix(t.listTileTheme.titleTextStyle),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: t.filledButtonTheme.style?.copyWith(
-          textStyle: fixProp(t.filledButtonTheme.style),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: t.textButtonTheme.style?.copyWith(
-          textStyle: fixProp(t.textButtonTheme.style),
-        ),
-      ),
-    );
-  }
+  /// 캡쳐도 앱 테마 그대로 (글꼴이 내장이라 덧입힐 것이 없다).
+  ThemeData shotTheme(Brightness b) => buildAppTheme(b);
 
   Widget buildApp({
     ThemeMode mode = ThemeMode.light,
@@ -132,7 +116,7 @@ void main() {
           home:
               (prefs ?? const {'onboarding_done': '1'})['onboarding_done'] ==
                   '1'
-              ? const CalendarPage()
+              ? const HomeShell()
               : const OnboardingPage(),
         ),
       ),
@@ -151,17 +135,7 @@ void main() {
     });
   }
 
-  Future<void> openMenu(WidgetTester tester, String item) async {
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(item));
-    await tester.pumpAndSettle();
-  }
 
-  Future<void> back(WidgetTester tester) async {
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
-  }
 
   /// 데모 데이터: 업체 2곳(3.3% / 4대보험), 3~9월 근무 기록, 부가항목, 메모.
   Future<({int siteA, int siteB})> seed() async {

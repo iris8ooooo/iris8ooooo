@@ -7,6 +7,7 @@ import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../../state/trash_providers.dart';
 import '../common/won_format.dart';
+import '../common/app_icons.dart';
 
 /// 삭제된 기록 — soft delete 된 공수·부가항목을 되살린다.
 ///
@@ -60,7 +61,7 @@ class TrashPage extends ConsumerWidget {
             ListTile(
               key: ValueKey('trash-entry-${e.id}'),
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.history),
+              leading: const Icon(AppIcons.history),
               title: Text(
                 '${_date(e.dateKey)} · '
                 '${e.labelSnapshot.isEmpty ? '' : '${e.labelSnapshot} '}'
@@ -82,7 +83,7 @@ class TrashPage extends ConsumerWidget {
             ListTile(
               key: ValueKey('trash-item-${it.id}'),
               contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.receipt_long_outlined),
+              leading: const Icon(AppIcons.settlement),
               title: Text(
                 '${_date(it.dateKey)} · ${it.label} ${formatWon(it.amountWon)}',
               ),

@@ -7,6 +7,7 @@ import '../../domain/marker_palette.dart';
 import '../../state/db_providers.dart';
 import '../../state/preset_providers.dart';
 import 'preset_edit_page.dart';
+import '../common/app_icons.dart';
 
 /// 프리셋 관리: 추가 / 수정 / 순서 변경 / 보관(삭제).
 class PresetListPage extends ConsumerWidget {
@@ -47,7 +48,7 @@ class PresetListPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('프리셋 관리')),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
+        icon: const Icon(AppIcons.add),
         label: const Text('프리셋 추가'),
         onPressed: () => Navigator.of(context)
             .push(MaterialPageRoute(builder: (_) => const PresetEditPage())),
@@ -90,14 +91,14 @@ class PresetListPage extends ConsumerWidget {
                     children: [
                       IconButton(
                         tooltip: '삭제',
-                        icon: const Icon(Icons.delete_outline),
+                        icon: const Icon(AppIcons.delete),
                         onPressed: () => _confirmArchive(context, ref, preset),
                       ),
                       ReorderableDragStartListener(
                         index: index,
                         child: const Padding(
                           padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Icon(Icons.drag_handle),
+                          child: Icon(AppIcons.dragHandle),
                         ),
                       ),
                     ],

@@ -20,6 +20,7 @@ import '../common/won_format.dart';
 import '../presets/preset_list_page.dart';
 import 'extra_item_dialog.dart';
 import 'site_chips.dart';
+import '../common/app_icons.dart';
 
 /// 날짜 탭 → 이 시트. 프리셋 버튼 탭이 두 번째(마지막) 탭이 되도록 설계
 /// (요구: 3탭 이내, 실제 2탭).
@@ -508,7 +509,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             padding: const EdgeInsets.only(bottom: 8),
             child: OutlinedButton.icon(
               key: const ValueKey('override-button'),
-              icon: const Icon(Icons.price_change_outlined),
+              icon: const Icon(AppIcons.rate),
               label: Text(
                 (live ?? editing).unitRateWonOverride == null
                     ? '이 날만 단가 설정'
@@ -671,7 +672,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                     IconButton(
                       tooltip: '삭제',
                       icon: Icon(
-                        Icons.delete_outline,
+                        AppIcons.delete,
                         color: scheme.onSurfaceVariant,
                       ),
                       onPressed: () => _delete(entry),
@@ -714,7 +715,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             child: Row(
               children: [
                 Icon(
-                  Icons.sticky_note_2_outlined,
+                  AppIcons.memo,
                   size: 18,
                   color: scheme.tertiary,
                 ),
@@ -808,7 +809,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.dialpad),
+                icon: const Icon(AppIcons.keypad),
                 label: const Text('직접 입력'),
                 onPressed: () => setState(() {
                   _editing = null;
@@ -819,7 +820,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             const SizedBox(width: 8),
             Expanded(
               child: OutlinedButton.icon(
-                icon: const Icon(Icons.sticky_note_2_outlined),
+                icon: const Icon(AppIcons.memo),
                 label: Text(memo == null ? '메모' : '메모 수정'),
                 // 메모 스트림이 아직 도착하지 않았을 때 진입하면 기존 메모를
                 // 빈 값으로 덮어쓸 수 있다 — 로딩이 끝난 뒤에만 활성화.
@@ -870,7 +871,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             ),
             TextButton.icon(
               key: const ValueKey('add-extra-item'),
-              icon: const Icon(Icons.add, size: 18),
+              icon: const Icon(AppIcons.add, size: 18),
               label: const Text('추가'),
               onPressed: () => _addExtraItem(siteId),
             ),
@@ -884,8 +885,8 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               children: [
                 Icon(
                   ExtraItemKind.fromCode(item.kind) == ExtraItemKind.deduction
-                      ? Icons.remove_circle_outline
-                      : Icons.add_circle_outline,
+                      ? AppIcons.remove
+                      : AppIcons.addCircle,
                   size: 20,
                   color:
                       ExtraItemKind.fromCode(item.kind) ==
@@ -912,7 +913,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                 IconButton(
                   tooltip: '삭제',
                   icon: Icon(
-                    Icons.delete_outline,
+                    AppIcons.delete,
                     color: scheme.onSurfaceVariant,
                   ),
                   onPressed: () => _deleteItem(item),

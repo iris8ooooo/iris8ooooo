@@ -6,6 +6,7 @@ import '../../domain/gongsu_value.dart';
 import '../../domain/marker_palette.dart';
 import '../../state/db_providers.dart';
 import '../common/gongsu_keypad.dart';
+import '../common/app_icons.dart';
 
 /// 프리셋 추가/수정: 이름 + 공수값(자체 키패드) + 팔레트 색.
 class PresetEditPage extends ConsumerStatefulWidget {
@@ -135,7 +136,7 @@ class _PresetEditPageState extends ConsumerState<PresetEditPage> {
                 color: _centi == null ? scheme.onSurfaceVariant : null,
               ),
             ),
-            trailing: const Icon(Icons.edit),
+            trailing: const Icon(AppIcons.edit),
             onTap: _pickValue,
           ),
           const SizedBox(height: 16),
@@ -165,7 +166,7 @@ class _PresetEditPageState extends ConsumerState<PresetEditPage> {
                     ),
                     child: _colorId == entry.id
                         ? Icon(
-                            Icons.check,
+                            AppIcons.check,
                             color:
                                 Theme.of(context).brightness == Brightness.dark
                                 ? Colors.black
