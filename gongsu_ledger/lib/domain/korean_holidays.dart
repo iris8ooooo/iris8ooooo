@@ -74,6 +74,52 @@ const Map<int, String> _holidays = {
 /// 공휴일이면 이름, 아니면 null.
 String? koreanHolidayName(int dateKey) => _holidays[dateKey];
 
+/// 달력 칸에 들어가는 짧은 이름(4자 이내). 칸 폭이 좁아 정식 이름은 넘친다.
+String holidayShortName(String name) => switch (name) {
+  '대체공휴일' => '대체휴일',
+  '임시공휴일' => '임시휴일',
+  '부처님오신날' => '석탄일',
+  '어린이날·부처님오신날' => '어린이날',
+  '대통령선거' || '지방선거' || '국회의원선거' => '선거일',
+  '설날 연휴' => '설날',
+  '추석 연휴' => '추석',
+  _ => name,
+};
+
+/// 한 달(yyyyMM)의 공휴일: dateKey → 짧은 이름, 날짜 오름차순.
+Map<int, String> holidaysInMonth(int ym) {
+  final keys = _holidays.keys.where((k) => k ~/ 100 == ym).toList()..sort();
+  return {for (final k in keys) k: holidayShortName(_holidays[k]!)};
+}
+
+/// 달력 위 한 줄 요약 — "추석 24~26 · 대체휴일 28". 같은 이름이 연이어
+/// 있으면 범위로 묶는다. 공휴일이 없으면 빈 문자열.
+String holidaySummary(int ym) {
+  final byDay = holidaysInMonth(ym);
+  final parts = <String>[];
+  int? start;
+  int? end;
+  String? name;
+  void flush() {
+    if (name == null) return;
+    parts.add(start == end ? '$name $start' : '$name $start~$end');
+  }
+
+  for (final entry in byDay.entries) {
+    final day = entry.key % 100;
+    if (name == entry.value && end != null && day == end + 1) {
+      end = day;
+      continue;
+    }
+    flush();
+    name = entry.value;
+    start = day;
+    end = day;
+  }
+  flush();
+  return parts.join(' · ');
+}
+
 bool isKoreanHoliday(int dateKey) => _holidays.containsKey(dateKey);
 
 /// 내장 데이터가 있는 연도 (달력에 "이 연도 공휴일은 아직 없음" 안내용).

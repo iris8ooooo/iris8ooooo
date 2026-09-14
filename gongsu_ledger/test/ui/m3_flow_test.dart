@@ -48,8 +48,10 @@ void main() {
     return dateKeyOf(DateTime(today.year, today.month, day));
   }
 
-  String textOf(WidgetTester tester, String key) =>
-      tester.widget<Text>(find.byKey(ValueKey(key))).data!;
+  String textOf(WidgetTester tester, String key) {
+    final t = tester.widget<Text>(find.byKey(ValueKey(key)));
+    return t.data ?? t.textSpan!.toPlainText();
+  }
 
 
   /// 단가 150,000원 업체 + 이번 달 1공수 기록 2건.
@@ -77,18 +79,26 @@ void main() {
     return siteId;
   }
 
-  testWidgets('3.3% 업체: 월 카드에 세후 실수령이 뜬다 (300,000 → 290,100)', (tester) async {
+  testWidgets('3.3% 업체: 월 요약 큰 숫자가 세후 실수령 (300,000 → 290,100)', (tester) async {
     await pumpWithSiteAndEntries(tester, taxMode: TaxMode.withholding33);
-    expect(textOf(tester, 'gross-won'), '300,000원');
     // 소득세 9,000 + 지방소득세 900
     expect(textOf(tester, 'net-won'), '290,100원');
-    expect(find.text('세금·보험 공제 9,900원'), findsOneWidget);
+    expect(find.text('${DateTime.now().month}월 실수령'), findsOneWidget);
+    expect(
+      find.text('세전 300,000원 · 세금·보험 공제 9,900원'),
+      findsOneWidget,
+    );
     await unmountApp(tester);
   });
 
-  testWidgets('세금 방식 미설정이면 실수령 = 세전 + 안내 문구', (tester) async {
+  testWidgets('세금 방식 미설정이면 큰 숫자는 세전 + 안내 문구', (tester) async {
     await pumpWithSiteAndEntries(tester);
-    expect(textOf(tester, 'net-won'), '300,000원');
+    expect(textOf(tester, 'gross-won'), '300,000원');
+    expect(find.byKey(const ValueKey('net-won')), findsNothing);
+    expect(
+      find.text('${DateTime.now().month}월 예상 수입 (세전)'),
+      findsOneWidget,
+    );
     expect(find.text('업체 수정 → 세금 방식을 고르면 공제가 계산돼요'), findsOneWidget);
     await unmountApp(tester);
   });
@@ -117,7 +127,10 @@ void main() {
     // 2일 근무(8일 미만): 연금·건강 없음. 일당 150,000 = 일 공제액이라
     // 일용소득세 0. 고용보험 300,000 × 0.9% = 2,700 → 실수령 297,300
     expect(textOf(tester, 'net-won'), '297,300원');
-    expect(find.text('세금·보험 공제 2,700원'), findsOneWidget);
+    expect(
+      find.text('세전 300,000원 · 세금·보험 공제 2,700원'),
+      findsOneWidget,
+    );
     await unmountApp(tester);
   });
 

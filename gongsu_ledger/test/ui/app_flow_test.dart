@@ -53,7 +53,8 @@ void main() {
     await tester.pumpAndSettle();
 
     final today = DateTime.now();
-    expect(find.text('${today.year}년 ${today.month}월'), findsOneWidget);
+    expect(find.text('${today.month}월'), findsOneWidget); // 명조 달 이름
+    expect(find.text('${today.year}'), findsOneWidget);
     expect(find.text('${today.month}월 총 공수'), findsOneWidget);
     expect(find.text('0 공수'), findsOneWidget);
     expect(find.byKey(ValueKey('day-${dateKeyOf(today)}')), findsOneWidget);

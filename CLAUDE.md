@@ -209,7 +209,9 @@ iOS + Android 동시 출시 목표. 사용자(프로젝트 오너)는 비개발�
 - **글꼴**: 본문·숫자 Pretendard 4굵기(400/500/700/800, OFL, KS X 1001 한글 2,350자 + 기호로 서브셋 ≈ 480KB/굵기) + 월 이름·화면 제목만 Song Myung(OFL, 제목 글자만 서브셋 69KB, `AppFonts.displayStyle`, 없는 글자는 Pretendard 폴백). 나눔고딕은 PDF 전용. 서브셋 도구는 fontTools(pyftsubset) — 글꼴에 없는 글자를 제목에 쓰면 폴백되므로 제목 문구를 바꾸면 서브셋에 글자를 추가한다
 - **앱 안 아이콘 = Phosphor 한 벌** (`lib/ui/common/app_icons.dart`, 글꼴 `assets/fonts/Phosphor-Regular.ttf`·`Phosphor-Fill.ttf` 내장, MIT). `phosphor_flutter` 패키지는 Flutter 3.47 에서 컴파일되지 않아(IconData final) 쓰지 않는다. Material `Icons.` 직접 사용 금지 — `test/guards/app_icons_guard_test.dart` 가 코드포인트 존재와 함께 강제
 - **홈 = `ui/home/home_shell.dart`**: 탭 4개(달력·정산·통계·설정) + 떠 있는 알약 탭(`InkNavBar`, 화면 아래 18px, 켜진 탭은 옅은 잉크 바탕 + 채운 아이콘). 탭 화면은 `bottomNavigationBar: NavSpacer()` 로 알약 자리를 비워 둔다. 안 연 탭은 만들지 않는다(콜드 스타트). 옛 ⋮ 메뉴 항목(업체·프리셋·백업·세율)은 설정 화면 줄로 이동(키 `sites`·`presets`·`backup`·`tax`). 테스트는 `test/ui/nav_helpers.dart` 의 `openMenu`/`goTab`/`back` 만 쓴다
-- 진행: PR 1(토대: 글꼴·토큰·아이콘·탭) 완료 → PR 2 달력 홈(농도 칸·공휴일 이름·금색 오늘·범례) → PR 3 입력 시트 → PR 4 나머지 화면 + 앱 아이콘(잉크 격자) + 스토어 스크린샷
+- **달력 홈(PR 2)**: 칸은 `ui/calendar/day_cell.dart` — 기록이 있으면 농도 배경(`tintForCenti`, 가장 진한 단계는 흰 글자), 오늘은 금색 동그라미, 일요일·공휴일 숫자 빨강, 토요일 파랑, 공휴일은 빨간 테두리 + 짧은 이름(`holidayShortName`, 4자 이내를 테스트로 고정: 대체공휴일→대체휴일·부처님오신날→석탄일·선거→선거일·연휴→설날/추석). 칸 높이가 46 미만이면 넘치는 대신 칸 전체를 같은 비율로 축소(`LayoutBuilder`+`FittedBox`), 격자 높이 상한은 시안 칸 62px×6(`MonthView.maxHeight`). 메모 표시는 잉크색 네모(업체 색 원과 헷갈리지 않게 보라를 쓰지 않는다)
+- **월 요약 `month_hero.dart`는 큰 숫자 하나**: 금액 정보 없음 → 총 공수(키 `hero-gongsu`) / 업체에 세금 방식 미설정 → 세전 예상 수입(`gross-won`) + 안내 문구 / 설정됨 → 실수령(`net-won`) + "세전 X원 · 세금·보험 공제 Y원". 키는 `Text.rich` 에 붙어 있고 `find.text` 는 toPlainText 로 통째로 찾는다(테스트 `textOf` 는 `data ?? textSpan.toPlainText()`). 공휴일 요약은 `holidaySummary(ym)`("추석 24~26 · 대체휴일 28"), 데이터 없는 연도(2028+)는 "공휴일 정보 없음 · 앱 업데이트 필요". 업체 범례 = 활성 업체 + 그 달 말일 기준 단가(`resolveSiteRateWon`)
+- 진행: PR 1(토대: 글꼴·토큰·아이콘·탭) 완료 → PR 2 달력 홈 완료 → PR 3 입력 시트 → PR 4 나머지 화면 + 앱 아이콘(잉크 격자) + 스토어 스크린샷
 
 ## 백로그
 
