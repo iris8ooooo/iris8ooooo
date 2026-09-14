@@ -10,6 +10,7 @@ import 'package:gongsu_ledger/data/repositories/site_repository.dart';
 import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 import 'package:gongsu_ledger/state/prefs_providers.dart';
+import 'package:gongsu_ledger/ui/entry_sheet/site_chips.dart';
 import 'nav_helpers.dart';
 
 /// M2 플로: 업체 선택 입력 → 세전 수입 카드, 부가항목, 날짜별 단가 오버라이드.
@@ -99,7 +100,7 @@ void main() {
     final second = pickEmptyDayKey(offset: 2);
     await tester.tap(find.byKey(ValueKey('day-$second')));
     await tester.pumpAndSettle();
-    final chip = tester.widget<ChoiceChip>(
+    final chip = tester.widget<SitePill>(
       find.byKey(ValueKey('site-chip-$siteId')),
     );
     expect(chip.selected, true);

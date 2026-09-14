@@ -39,6 +39,7 @@ abstract final class AppIcons {
   static const IconData checkCircle = IconData(0xe184, fontFamily: 'PhosphorFill');
   static const IconData memo = IconData(0xe34c, fontFamily: 'PhosphorRegular');
   static const IconData keypad = IconData(0xe2d8, fontFamily: 'PhosphorRegular');
+  static const IconData backspace = IconData(0xe0ae, fontFamily: 'PhosphorRegular');
   static const IconData copy = IconData(0xe1ca, fontFamily: 'PhosphorRegular');
   static const IconData save = IconData(0xe248, fontFamily: 'PhosphorRegular');
 

@@ -62,6 +62,38 @@ class WorkEntryRepository {
     );
   }
 
+  /// 연속 채우기 — 여러 날짜에 같은 프리셋 기록을 한 트랜잭션으로 넣는다.
+  /// 날짜 선별(이미 기록 있는 날·쉬는 날 제외)은 `domain/range_fill.dart` 의
+  /// 순수 함수가 하고, 여기는 넣기만 한다. 넣은 건수를 돌려준다.
+  Future<int> addFromPresetMany({
+    required Iterable<int> dateKeys,
+    required Preset preset,
+    int? siteId,
+  }) {
+    _validateCenti(preset.centiGongsu);
+    return _dao.transaction(() async {
+      var inserted = 0;
+      for (final dateKey in dateKeys) {
+        final now = _now;
+        await _dao.insertEntry(
+          WorkEntriesCompanion.insert(
+            uid: generateUid(),
+            dateKey: dateKey,
+            centiGongsu: preset.centiGongsu,
+            presetId: Value(preset.id),
+            labelSnapshot: Value(preset.name),
+            colorIdSnapshot: Value(preset.colorId),
+            siteId: Value(siteId),
+            createdAtMillis: now,
+            updatedAtMillis: now,
+          ),
+        );
+        inserted++;
+      }
+      return inserted;
+    });
+  }
+
   /// 기록의 업체 변경 (NULL = 업체 해제).
   Future<void> updateSite({required int id, required int? siteId}) =>
       _dao.updateFields(
