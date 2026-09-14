@@ -9,12 +9,18 @@ import '../../data/db/connection.dart';
 import '../../data/db/db_rescue.dart';
 import '../../state/db_providers.dart';
 import '../../domain/date_key.dart';
+import '../../domain/korean_holidays.dart';
 import '../../domain/month_grid.dart';
+import '../../domain/marker_palette.dart';
+import '../../domain/rate_resolver.dart';
 import '../../state/appearance_providers.dart';
 import '../../state/backup_providers.dart';
 import '../../state/calendar_providers.dart';
+import '../../state/site_providers.dart';
+import '../app_theme.dart';
+import '../common/won_format.dart';
 import '../home/ink_nav_bar.dart';
-import 'month_summary_card.dart';
+import 'month_hero.dart';
 import 'month_view.dart';
 import '../../app_info.dart';
 import '../common/app_icons.dart';
@@ -120,49 +126,275 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     ref.watch(monthEntriesProvider(prevYm(ym)));
     ref.watch(monthEntriesProvider(nextYm(ym)));
 
+    final c = context.colors;
     return Scaffold(
-      appBar: AppBar(
-        title: Text('${yearOfYm(ym)}년 ${monthOfYm(ym)}월'),
-        actions: [
-          IconButton(
-            key: const ValueKey('capture-share'),
-            tooltip: '달력 이미지 공유',
-            icon: const Icon(AppIcons.share),
-            onPressed: _shareCapture,
+      bottomNavigationBar: const NavSpacer(),
+      body: SafeArea(
+        bottom: false,
+        child: Stack(
+          children: [
+            // 캡쳐 공유 범위: 제목·요약·범례·격자 (오른쪽 위 버튼은 제외).
+            RepaintBoundary(
+              key: _captureKey,
+              child: ColoredBox(
+                color: c.paper,
+                child: Column(
+                  children: [
+                    _MonthTitle(ym: ym),
+                    MonthHero(ym: ym),
+                    _LegendRow(ym: ym),
+                    const _WeekdayHeader(),
+                    // 격자는 남는 높이를 쓰되 칸이 시안(62px)보다 길어지지
+                    // 않게 상한을 두고, 업체 범례는 격자 바로 아래에 붙인다.
+                    Expanded(
+                      child: Column(
+                        children: [
+                          Flexible(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(
+                                maxHeight: MonthView.maxHeight,
+                              ),
+                              child: PageView.builder(
+                                controller: _controller,
+                                onPageChanged: (page) => ref
+                                    .read(visibleYmProvider.notifier)
+                                    .set(_ymOfPage(page)),
+                                itemBuilder: (context, page) => MonthView(
+                                  ym: _ymOfPage(page),
+                                  onOutsideMonthTap: _goToMonth,
+                                ),
+                              ),
+                            ),
+                          ),
+                          _SiteLegend(ym: ym),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              top: 2,
+              right: 10,
+              child: Row(
+                children: [
+                  IconButton(
+                    key: const ValueKey('capture-share'),
+                    tooltip: '달력 이미지 공유',
+                    icon: const Icon(AppIcons.share),
+                    onPressed: _shareCapture,
+                  ),
+                  IconButton(
+                    tooltip: '오늘로 이동',
+                    icon: const Icon(AppIcons.today),
+                    onPressed: () =>
+                        _goToMonth(ymOfDateKey(dateKeyOf(DateTime.now()))),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// "9월  2026" — 달 이름은 명조(Song Myung), 연도는 작은 본문 글자.
+class _MonthTitle extends StatelessWidget {
+  const _MonthTitle({required this.ym});
+
+  final int ym;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return Padding(
+      // 오른쪽은 공유·오늘 버튼 자리.
+      padding: const EdgeInsets.fromLTRB(24, 6, 110, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.baseline,
+        textBaseline: TextBaseline.alphabetic,
+        children: [
+          Text(
+            '${monthOfYm(ym)}월',
+            key: const ValueKey('month-title'),
+            style: AppFonts.displayStyle(size: 44, color: c.text),
           ),
-          IconButton(
-            tooltip: '오늘로 이동',
-            icon: const Icon(AppIcons.today),
-            onPressed: () => _goToMonth(ymOfDateKey(dateKeyOf(DateTime.now()))),
+          const SizedBox(width: 10),
+          Text(
+            '${yearOfYm(ym)}',
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: c.muted,
+            ),
           ),
         ],
       ),
-      bottomNavigationBar: const NavSpacer(),
-      body: SafeArea(
-        child: RepaintBoundary(
-          key: _captureKey,
-          child: ColoredBox(
-            color: Theme.of(context).colorScheme.surface,
-            child: Column(
-              children: [
-                MonthSummaryCard(ym: ym),
-                const _WeekdayHeader(),
-                Expanded(
-                  child: PageView.builder(
-                    controller: _controller,
-                    onPageChanged: (page) => ref
-                        .read(visibleYmProvider.notifier)
-                        .set(_ymOfPage(page)),
-                    itemBuilder: (context, page) => MonthView(
-                      ym: _ymOfPage(page),
-                      onOutsideMonthTap: _goToMonth,
-                    ),
-                  ),
-                ),
-              ],
+    );
+  }
+}
+
+/// 농도 범례(왼쪽) + 이번 달 공휴일 요약(오른쪽, 빨강).
+class _LegendRow extends StatelessWidget {
+  const _LegendRow({required this.ym});
+
+  final int ym;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final hasData = koreanHolidayYears.contains(yearOfYm(ym));
+    final summary = holidaySummary(ym);
+    final holidayText = !hasData
+        ? '공휴일 정보 없음 · 앱 업데이트 필요'
+        : summary.isEmpty
+        ? '공휴일 없음'
+        : summary;
+    final swatchLabel = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: c.muted,
+    );
+    Widget swatch(String label, Color color) => Padding(
+      padding: const EdgeInsets.only(right: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(label, style: swatchLabel),
+          const SizedBox(width: 4),
+          Container(
+            width: 14,
+            height: 10,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(3),
             ),
           ),
+        ],
+      ),
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+      child: Row(
+        children: [
+          Semantics(
+            label: '공수 농도 범례',
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  swatch('0.5', c.tint05),
+                  swatch('1', c.tint10),
+                  swatch('1.5', c.tint15),
+                  swatch('2+', c.tint20),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  holidayText,
+                  key: const ValueKey('holiday-summary'),
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                    color: hasData && summary.isNotEmpty ? c.red : c.muted,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 격자 아래 업체 범례 — 색 점 + 이름 + 이 달 말일 기준 단가, 메모 네모.
+/// 업체도 메모도 없으면 자리 자체를 비운다.
+class _SiteLegend extends ConsumerWidget {
+  const _SiteLegend({required this.ym});
+
+  final int ym;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.colors;
+    final sites = ref.watch(sitesProvider).valueOrNull ?? const [];
+    final hasMemo =
+        (ref.watch(monthMemoKeysProvider(ym)).valueOrNull ?? const <int>{})
+            .isNotEmpty;
+    if (sites.isEmpty && !hasMemo) return const SizedBox(height: 4);
+    final rates = ref.watch(allRatesProvider).valueOrNull ?? const [];
+    final histories = [
+      for (final r in rates)
+        (
+          siteId: r.siteId,
+          effectiveFromDateKey: r.effectiveFromDateKey,
+          dailyRateWon: r.dailyRateWon,
         ),
+    ];
+    final monthEndKey = ym * 100 + daysInMonth(ym);
+    final brightness = Theme.of(context).brightness;
+    final style = TextStyle(
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
+      color: c.muted,
+    );
+    Widget item(Widget mark, String label) => Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [mark, const SizedBox(width: 5), Text(label, style: style)],
+    );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 6, 24, 4),
+      child: Wrap(
+        spacing: 14,
+        runSpacing: 4,
+        children: [
+          for (final site in sites)
+            item(
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: MarkerPalette.colorOf(
+                    site.colorId,
+                    brightness: brightness,
+                  ),
+                ),
+              ),
+              switch (resolveSiteRateWon(
+                histories: histories,
+                siteId: site.id,
+                dateKey: monthEndKey,
+              )) {
+                null => site.name,
+                final won => '${site.name} ${formatWon(won)}',
+              },
+            ),
+          if (hasMemo)
+            item(
+              Container(
+                width: 7,
+                height: 7,
+                decoration: BoxDecoration(
+                  color: c.text,
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+              '메모',
+            ),
+        ],
       ),
     );
   }
@@ -311,12 +543,17 @@ class _WeekdayHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
     final weekStart = ref.watch(
       appearanceProvider.select((a) => a.weekStart.weekday),
     );
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      padding: const EdgeInsets.fromLTRB(
+        MonthView.horizontalPadding,
+        10,
+        MonthView.horizontalPadding,
+        4,
+      ),
       child: Row(
         children: [
           for (final weekday in weekdayOrder(weekStartWeekday: weekStart))
@@ -325,12 +562,12 @@ class _WeekdayHeader extends ConsumerWidget {
                 child: Text(
                   _names[weekday]!,
                   style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
                     color: switch (weekday) {
-                      DateTime.sunday => scheme.error,
-                      DateTime.saturday => scheme.primary,
-                      _ => scheme.onSurfaceVariant,
+                      DateTime.sunday => c.red,
+                      DateTime.saturday => c.blue,
+                      _ => c.muted,
                     },
                   ),
                 ),

@@ -49,8 +49,10 @@ void main() {
   int monthStart(int dateKey) => (dateKey ~/ 100) * 100 + 1;
   int monthEnd(int dateKey) => (dateKey ~/ 100) * 100 + 31;
 
-  String grossText(WidgetTester tester) =>
-      tester.widget<Text>(find.byKey(const ValueKey('gross-won'))).data!;
+  String grossText(WidgetTester tester) {
+    final t = tester.widget<Text>(find.byKey(const ValueKey('gross-won')));
+    return t.data ?? t.textSpan!.toPlainText();
+  }
 
   /// 앱을 띄우고 단가 150,000원짜리 업체 하나를 만든다.
   Future<int> pumpWithSite(WidgetTester tester) async {
