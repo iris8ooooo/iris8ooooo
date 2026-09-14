@@ -25,6 +25,8 @@ abstract final class AppIcons {
   static const IconData more = IconData(0xe208, fontFamily: 'PhosphorRegular');
 
   // 이동·목록
+  static const IconData back = IconData(0xe058, fontFamily: 'PhosphorRegular');
+  static const IconData close = IconData(0xe4f6, fontFamily: 'PhosphorRegular');
   static const IconData chevronRight = IconData(0xe13a, fontFamily: 'PhosphorRegular');
   static const IconData chevronLeft = IconData(0xe138, fontFamily: 'PhosphorRegular');
   static const IconData dragHandle = IconData(0xeae2, fontFamily: 'PhosphorRegular');

@@ -157,7 +157,7 @@ void main() {
     expect(textOf(tester, 'stats-year'), '${DateTime.now().year}년');
     expect(textOf(tester, 'year-centi'), '2');
     expect(textOf(tester, 'year-net'), '290,100원');
-    expect(find.text('월별 추이'), findsOneWidget);
+    expect(find.text('월별 공수 · 실수령'), findsOneWidget);
     await unmountApp(tester);
   });
 

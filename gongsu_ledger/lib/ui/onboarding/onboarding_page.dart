@@ -7,6 +7,7 @@ import '../../state/db_providers.dart';
 import '../../state/prefs_providers.dart';
 import '../../state/pro_providers.dart';
 import '../../app_info.dart';
+import '../app_theme.dart';
 import '../common/app_icons.dart';
 
 /// 첫 실행 온보딩: 직군 선택 → 기본 프리셋 세트. 로그인·회원가입 없음.
@@ -77,7 +78,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
     return Scaffold(
       appBar: widget.standalone
           ? AppBar(title: const Text('직군 프리셋 다시 고르기'))
@@ -89,63 +90,72 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             if (!widget.standalone) ...[
               Text(
                 kAppName,
-                style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  color: scheme.primary,
-                ),
+                style: AppFonts.displayStyle(size: 44, color: c.text),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               const _Bullet('광고 없음'),
               const _Bullet('인터넷 없어도 전부 동작'),
               const _Bullet('기록은 내 폰 안에만 · 회원가입 없음'),
-              const SizedBox(height: 28),
+              const SizedBox(height: 32),
             ],
-            const Text(
+            Text(
               '어떤 일을 하세요?',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: c.text,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               '자주 쓰는 공수 버튼을 미리 만들어 드려요.',
-              style: TextStyle(fontSize: 16, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 15, color: c.muted),
             ),
             const SizedBox(height: 16),
             for (final kind in JobKind.values)
-              Card(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  key: ValueKey('onboard-${kind.name}'),
-                  borderRadius: BorderRadius.circular(12),
-                  onTap: _busy ? null : () => _choose(kind),
-                  child: Padding(
-                    padding: const EdgeInsets.all(18),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                kind.label,
-                                style: const TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w700,
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Material(
+                  color: c.surface,
+                  borderRadius: BorderRadius.circular(16),
+                  child: InkWell(
+                    key: ValueKey('onboard-${kind.name}'),
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: _busy ? null : () => _choose(kind),
+                    child: Container(
+                      padding: const EdgeInsets.fromLTRB(18, 16, 14, 16),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: c.line.withValues(alpha: 0.8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  kind.label,
+                                  style: TextStyle(
+                                    fontSize: 19,
+                                    fontWeight: FontWeight.w800,
+                                    color: c.text,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                kind.description,
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: scheme.onSurfaceVariant,
+                                const SizedBox(height: 3),
+                                Text(
+                                  kind.description,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: c.muted,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                        Icon(AppIcons.chevronRight, color: scheme.primary),
-                      ],
+                          Icon(AppIcons.chevronRight, color: c.muted),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -153,7 +163,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
             const SizedBox(height: 8),
             Text(
               '나중에 설정에서 바꿀 수 있어요. 직접 만들거나 고친 프리셋은 그대로 남아요.',
-              style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+              style: TextStyle(fontSize: 13, color: c.muted),
             ),
           ],
         ),
@@ -172,13 +182,14 @@ class _Bullet extends StatelessWidget {
     padding: const EdgeInsets.symmetric(vertical: 3),
     child: Row(
       children: [
-        Icon(
-          AppIcons.check,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(AppIcons.check, size: 20, color: context.colors.gold),
         const SizedBox(width: 8),
-        Expanded(child: Text(text, style: const TextStyle(fontSize: 17))),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(fontSize: 16, color: context.colors.text),
+          ),
+        ),
       ],
     ),
   );
