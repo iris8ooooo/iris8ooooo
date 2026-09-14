@@ -10,15 +10,19 @@ import '../../domain/date_key.dart';
 import '../../domain/gongsu_value.dart';
 import '../../domain/korean_holidays.dart';
 import '../../domain/marker_palette.dart';
+import '../../domain/range_fill.dart';
 import '../../domain/rate_resolver.dart';
 import '../../state/calendar_providers.dart';
 import '../../state/db_providers.dart';
 import '../../state/preset_providers.dart';
 import '../../state/site_providers.dart';
+import '../app_theme.dart';
+import '../common/dashed_border.dart';
 import '../common/gongsu_keypad.dart';
 import '../common/won_format.dart';
 import '../presets/preset_list_page.dart';
 import 'extra_item_dialog.dart';
+import 'range_fill_dialog.dart';
 import 'site_chips.dart';
 import '../common/app_icons.dart';
 
@@ -90,14 +94,15 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     super.dispose();
   }
 
-  static const List<String> _weekdayNames = ['월', '화', '수', '목', '금', '토', '일'];
-
-  String get _title {
-    final d = dateFromKey(widget.dateKey);
-    final base = '${d.month}월 ${d.day}일 (${_weekdayNames[d.weekday - 1]})';
-    final holiday = koreanHolidayName(widget.dateKey);
-    return holiday == null ? base : '$base · $holiday';
-  }
+  static const List<String> _weekdayNames = [
+    '월요일',
+    '화요일',
+    '수요일',
+    '목요일',
+    '금요일',
+    '토요일',
+    '일요일',
+  ];
 
   /// 이 시트 라우트가 아직 최상단일 때만 pop — 이중 pop으로 달력 화면까지
   /// 닫히는 사고를 막는다.
@@ -343,6 +348,68 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     if (mounted) setState(() => _mode = _SheetMode.list);
   }
 
+  /// 연속 채우기: 이 날부터 고른 날까지 같은 프리셋·업체를 한 번에.
+  Future<void> _fillRange(List<Preset> presets, int? siteId) async {
+    if (presets.isEmpty) {
+      _showError('먼저 프리셋(공수 버튼)을 만들어 주세요.');
+      return;
+    }
+    final fromKey = widget.dateKey;
+    final Set<int> occupied;
+    try {
+      final rows = await ref
+          .read(databaseProvider)
+          .workEntryDao
+          .getRange(fromKey, addDaysToKey(fromKey, maxRangeFillDays));
+      occupied = {for (final r in rows) r.dateKey};
+    } catch (e) {
+      _showError('기록을 읽지 못했어요. 다시 시도해 주세요.');
+      return;
+    }
+    if (!mounted) return;
+    final input = await showRangeFillDialog(
+      context,
+      fromKey: fromKey,
+      presets: presets,
+      occupied: occupied,
+    );
+    if (input == null || !mounted || _busy) return;
+    final plan = planRangeFill(
+      fromKey: fromKey,
+      toKey: input.toKey,
+      skipRestDays: input.skipRestDays,
+      occupied: occupied,
+    );
+    _busy = true;
+    int inserted;
+    try {
+      inserted = await ref
+          .read(workEntryRepoProvider)
+          .addFromPresetMany(
+            dateKeys: plan.dateKeys,
+            preset: input.preset,
+            siteId: siteId,
+          );
+    } catch (e) {
+      _showError('저장하지 못했어요. 다시 시도해 주세요.');
+      return;
+    } finally {
+      _busy = false;
+    }
+    if (!mounted) return;
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    _popSheetOnce();
+    final skipped = plan.skippedRest + plan.skippedOccupied;
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(
+          '$inserted일에 ${input.preset.name} 기록을 넣었어요.'
+          '${skipped > 0 ? ' ($skipped일 건너뜀)' : ''}',
+        ),
+      ),
+    );
+  }
+
   void _showError(String message) {
     // 저장 실패의 무음 처리 금지 — 실패는 반드시 사용자에게 보인다.
     if (!mounted) return;
@@ -407,13 +474,13 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
         ref.watch(allRatesProvider).valueOrNull ?? const <SiteRateHistory>[];
     final items = ref.watch(dayExtraItemsProvider(widget.dateKey));
     final siteId = _effectiveSiteId(sites);
+    final memo = memoAsync.valueOrNull;
 
     // 메모 작성 중(저장 안 된 변경 있음)에는 스크림 탭/뒤로가기로 시트가
     // 그냥 닫히지 않게 확인을 거친다 — 무경고 유실 방지.
     // 메모 화면에서 '취소'로 나왔어도 쓰다 만 글이 남아 있으면 지켜 준다.
     final memoDirty =
-        _memoLoaded &&
-        _memoController.text.trim() != (memoAsync.valueOrNull?.body ?? '');
+        _memoLoaded && _memoController.text.trim() != (memo?.body ?? '');
 
     return PopScope(
       canPop: !memoDirty,
@@ -421,7 +488,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
         if (!didPop) _confirmDiscardMemo();
       },
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        padding: const EdgeInsets.fromLTRB(22, 10, 22, 22),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -431,28 +498,25 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                 child: Container(
                   width: 36,
                   height: 4,
-                  margin: const EdgeInsets.only(bottom: 8),
+                  margin: const EdgeInsets.only(bottom: 10),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.outlineVariant,
+                    color: context.colors.line,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-              Text(
-                _title,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
+              _buildHeader(
+                context,
+                memo: memo,
+                memoReady: memoAsync.hasValue,
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               switch (_mode) {
                 _SheetMode.list => _buildListMode(
                   context,
                   entries: entries,
                   presetsAsync: presetsAsync,
-                  memoAsync: memoAsync,
+                  memo: memo,
                   sites: sites,
                   siteById: siteById,
                   rates: rates,
@@ -474,6 +538,91 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     );
   }
 
+  /// "25일  9월 · 금요일 · 추석" + 오른쪽 메모 버튼.
+  Widget _buildHeader(
+    BuildContext context, {
+    required DayMemo? memo,
+    required bool memoReady,
+  }) {
+    final c = context.colors;
+    final d = dateFromKey(widget.dateKey);
+    final holiday = koreanHolidayName(widget.dateKey);
+    final sub = TextStyle(
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+      color: c.muted,
+    );
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 10,
+            runSpacing: 2,
+            children: [
+              Text(
+                '${d.day}일',
+                key: const ValueKey('sheet-day'),
+                style: AppFonts.displayStyle(size: 40, color: c.text),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text.rich(
+                  TextSpan(
+                    style: sub,
+                    children: [
+                      TextSpan(
+                        text: '${d.month}월 · ${_weekdayNames[d.weekday - 1]}',
+                      ),
+                      if (holiday != null) ...[
+                        const TextSpan(text: ' · '),
+                        TextSpan(
+                          text: holiday,
+                          style: TextStyle(
+                            color: c.red,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (_mode == _SheetMode.list)
+          TextButton.icon(
+            key: const ValueKey('memo-button'),
+            icon: const Icon(AppIcons.memo, size: 18),
+            label: Text(memo == null ? '메모' : '메모 수정'),
+            style: TextButton.styleFrom(
+              foregroundColor: c.text,
+              minimumSize: const Size(0, 40),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              textStyle: const TextStyle(
+                fontFamily: AppFonts.body,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            // 메모 스트림이 아직 도착하지 않았을 때 진입하면 기존 메모를
+            // 빈 값으로 덮어쓸 수 있다 — 로딩이 끝난 뒤에만 활성화.
+            onPressed: !memoReady
+                ? null
+                : () {
+                    if (!_memoLoaded) {
+                      _memoController.text = memo?.body ?? '';
+                      _memoLoaded = true;
+                    }
+                    setState(() => _mode = _SheetMode.memo);
+                  },
+          ),
+      ],
+    );
+  }
+
   Widget _buildInputMode(
     BuildContext context, {
     required List<Site> sites,
@@ -481,7 +630,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     required int? siteId,
   }) {
     final editing = _editing;
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
     // 수정 중인 기록은 스트림 갱신분(업체/오버라이드 변경)을 반영해서 보여준다.
     final live = editing == null
         ? null
@@ -502,7 +651,7 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
                 ? _chooseSite
                 : (id) => _changeEntrySite(live ?? editing, id),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
         ],
         if (editing != null)
           Padding(
@@ -517,8 +666,8 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: (live ?? editing).unitRateWonOverride == null
-                    ? scheme.onSurfaceVariant
-                    : scheme.primary,
+                    ? c.muted
+                    : c.accent,
               ),
               onPressed: () => _editOverride(live ?? editing),
             ),
@@ -540,22 +689,15 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     BuildContext context, {
     required List<WorkEntry> entries,
     required AsyncValue<List<Preset>> presetsAsync,
-    required AsyncValue<DayMemo?> memoAsync,
+    required DayMemo? memo,
     required List<Site> sites,
     required Map<int, Site> siteById,
     required List<SiteRateHistory> rates,
     required List<DayExtraItem> items,
     required int? siteId,
   }) {
-    final scheme = Theme.of(context).colorScheme;
-    final brightness = Theme.of(context).brightness;
+    final c = context.colors;
     final presets = presetsAsync.valueOrNull ?? const <Preset>[];
-    final memo = memoAsync.valueOrNull;
-    // 큰글씨 배율에서 버튼 안 두 줄 텍스트가 잘리지 않도록 셀 비율을
-    // 글자 배율에 맞춰 세로로 키운다.
-    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
-    final presetAspectRatio = 1.9 / textScale.clamp(1.0, 2.2);
-
     final histories = [
       for (final r in rates)
         (
@@ -564,25 +706,6 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           dailyRateWon: r.dailyRateWon,
         ),
     ];
-    var totalCenti = 0;
-    var dayLaborWon = 0;
-    var anyPriced = false;
-    for (final e in entries) {
-      totalCenti += e.centiGongsu;
-      final rate = resolveEntryRateWon(
-        dateKey: e.dateKey,
-        siteId: e.siteId,
-        unitRateWonOverride: e.unitRateWonOverride,
-        histories: histories,
-      );
-      if (rate != null) {
-        anyPriced = true;
-        dayLaborWon += calcAmountWon(
-          centiGongsu: e.centiGongsu,
-          dailyRateWon: rate,
-        );
-      }
-    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -590,17 +713,18 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
       children: [
         if (_lastDeleted != null)
           Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(left: 14),
             decoration: BoxDecoration(
-              color: scheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(10),
+              color: c.tint05,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     _lastDeleted!.isItem ? '부가항목 1건을 삭제했어요' : '기록 1건을 삭제했어요',
+                    style: TextStyle(fontSize: 14, color: c.text),
                   ),
                 ),
                 TextButton(onPressed: _undoDelete, child: const Text('실행 취소')),
@@ -609,243 +733,99 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           ),
         if (sites.isNotEmpty) ...[
           SiteChips(sites: sites, selectedId: siteId, onSelected: _chooseSite),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
         ],
         if (entries.isNotEmpty) ...[
-          for (final entry in entries)
-            InkWell(
-              key: ValueKey('entry-${entry.id}'),
-              borderRadius: BorderRadius.circular(10),
-              onTap: () => setState(() {
-                _editing = entry;
-                _mode = _SheetMode.input;
-              }),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: MarkerPalette.colorOf(
-                          siteById[entry.siteId]?.colorId ??
-                              entry.colorIdSnapshot,
-                          brightness: brightness,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            entry.labelSnapshot.isEmpty
-                                ? '직접 입력'
-                                : entry.labelSnapshot,
-                            style: const TextStyle(fontSize: 17),
-                          ),
-                          if (entry.siteId != null &&
-                              siteById[entry.siteId] != null)
-                            Text(
-                              siteById[entry.siteId]!.name +
-                                  (entry.unitRateWonOverride != null
-                                      ? ' · 단가 ${formatWon(entry.unitRateWonOverride!)}'
-                                      : ''),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '${formatGongsu(entry.centiGongsu)} 공수',
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: '삭제',
-                      icon: Icon(
-                        AppIcons.delete,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                      onPressed: () => _delete(entry),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const Divider(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text('합계', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Text(
-                      anyPriced
-                          ? '${formatGongsu(totalCenti)} 공수 · ${formatWon(dayLaborWon)}'
-                          : '${formatGongsu(totalCenti)} 공수',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          _EntriesCard(
+            entries: entries,
+            siteById: siteById,
+            histories: histories,
+            onEdit: (entry) => setState(() {
+              _editing = entry;
+              _mode = _SheetMode.input;
+            }),
+            onDelete: _delete,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
         ],
         if (memo != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.only(bottom: 12),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  AppIcons.memo,
-                  size: 18,
-                  color: scheme.tertiary,
-                ),
+                Icon(AppIcons.memo, size: 16, color: c.muted),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     memo.body,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: scheme.onSurfaceVariant,
-                    ),
+                    style: TextStyle(fontSize: 14, color: c.muted),
                   ),
                 ),
               ],
             ),
           ),
-        if (presets.isNotEmpty)
-          GridView.count(
-            crossAxisCount: 3,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: presetAspectRatio,
-            children: [
-              for (final preset in presets)
-                FilledButton.tonal(
-                  key: ValueKey('preset-${preset.id}'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                  ),
-                  onPressed: () => _addFromPreset(preset, siteId),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: MarkerPalette.colorOf(
-                                preset.colorId,
-                                brightness: brightness,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 5),
-                          Flexible(
-                            child: Text(
-                              preset.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        formatGongsu(preset.centiGongsu),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ],
-          )
-        else if (presetsAsync.hasValue)
+        _PresetTiles(
+          presets: presets,
+          usedPresetIds: {for (final e in entries) ?e.presetId},
+          onPreset: (preset) => _addFromPreset(preset, siteId),
+          onCustom: () => setState(() {
+            _editing = null;
+            _mode = _SheetMode.input;
+          }),
+        ),
+        if (presets.isEmpty && presetsAsync.hasValue)
           Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              '프리셋이 없어요. 아래 [프리셋 편집]에서 추가하세요.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: scheme.onSurfaceVariant),
+            padding: const EdgeInsets.only(top: 8),
+            child: Column(
+              children: [
+                Text(
+                  '공수 버튼(프리셋)이 없어요.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: c.muted),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final navigator = Navigator.of(context);
+                    navigator.pop();
+                    navigator.push(
+                      MaterialPageRoute(
+                        builder: (_) => const PresetListPage(),
+                      ),
+                    );
+                  },
+                  child: const Text('프리셋 편집'),
+                ),
+              ],
             ),
           ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         _buildExtraItems(context, items, siteById, siteId),
-        const SizedBox(height: 10),
+        const SizedBox(height: 18),
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(AppIcons.keypad),
-                label: const Text('직접 입력'),
-                onPressed: () => setState(() {
-                  _editing = null;
-                  _mode = _SheetMode.input;
-                }),
+              child: OutlinedButton(
+                key: const ValueKey('range-fill'),
+                onPressed: () => _fillRange(presets, siteId),
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text('연속 채우기'),
+                ),
               ),
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: OutlinedButton.icon(
-                icon: const Icon(AppIcons.memo),
-                label: Text(memo == null ? '메모' : '메모 수정'),
-                // 메모 스트림이 아직 도착하지 않았을 때 진입하면 기존 메모를
-                // 빈 값으로 덮어쓸 수 있다 — 로딩이 끝난 뒤에만 활성화.
-                onPressed: !memoAsync.hasValue
-                    ? null
-                    : () {
-                        if (!_memoLoaded) {
-                          _memoController.text = memo?.body ?? '';
-                          _memoLoaded = true;
-                        }
-                        setState(() => _mode = _SheetMode.memo);
-                      },
+              flex: 2,
+              child: FilledButton(
+                key: const ValueKey('sheet-close'),
+                onPressed: _popSheetOnce,
+                child: const Text('닫기'),
               ),
             ),
           ],
-        ),
-        TextButton(
-          onPressed: () {
-            final navigator = Navigator.of(context);
-            navigator.pop();
-            navigator.push(
-              MaterialPageRoute(builder: (_) => const PresetListPage()),
-            );
-          },
-          child: const Text('프리셋 편집'),
         ),
       ],
     );
@@ -857,22 +837,47 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
     Map<int, Site> siteById,
     int? siteId,
   ) {
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [
             Expanded(
-              child: Text(
-                '부가항목 (일비·식비·공제)',
-                style: TextStyle(fontSize: 14, color: scheme.onSurfaceVariant),
+              child: Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: c.text,
+                  ),
+                  children: [
+                    const TextSpan(text: '부가항목 '),
+                    TextSpan(
+                      text: '일비·식비·공제',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: c.muted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             TextButton.icon(
               key: const ValueKey('add-extra-item'),
-              icon: const Icon(AppIcons.add, size: 18),
+              icon: const Icon(AppIcons.add, size: 16),
               label: const Text('추가'),
+              style: TextButton.styleFrom(
+                foregroundColor: c.text,
+                minimumSize: const Size(0, 36),
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                textStyle: const TextStyle(
+                  fontFamily: AppFonts.body,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               onPressed: () => _addExtraItem(siteId),
             ),
           ],
@@ -880,42 +885,54 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
         for (final item in items)
           Padding(
             key: ValueKey('item-${item.id}'),
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.only(top: 4),
             child: Row(
               children: [
-                Icon(
-                  ExtraItemKind.fromCode(item.kind) == ExtraItemKind.deduction
-                      ? AppIcons.remove
-                      : AppIcons.addCircle,
-                  size: 20,
-                  color:
-                      ExtraItemKind.fromCode(item.kind) ==
-                          ExtraItemKind.deduction
-                      ? scheme.error
-                      : scheme.primary,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color: c.tint05,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${ExtraItemKind.fromCode(item.kind) == ExtraItemKind.deduction ? '−' : '+'} ${item.label}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color:
+                          ExtraItemKind.fromCode(item.kind) ==
+                              ExtraItemKind.deduction
+                          ? c.red
+                          : c.text,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     item.siteId != null && siteById[item.siteId] != null
-                        ? '${item.label} · ${siteById[item.siteId]!.name}'
-                        : item.label,
-                    style: const TextStyle(fontSize: 16),
+                        ? siteById[item.siteId]!.name
+                        : '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 14, color: c.muted),
                   ),
                 ),
                 Text(
                   formatWon(item.amountWon),
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                    color: c.text,
                   ),
                 ),
                 IconButton(
                   tooltip: '삭제',
-                  icon: Icon(
-                    AppIcons.delete,
-                    color: scheme.onSurfaceVariant,
-                  ),
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(AppIcons.delete, size: 20, color: c.muted),
                   onPressed: () => _deleteItem(item),
                 ),
               ],
@@ -941,7 +958,6 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
             style: const TextStyle(fontSize: 17),
             decoration: const InputDecoration(
               hintText: '이 날의 메모 (현장, 작업 내용 등)',
-              border: OutlineInputBorder(),
             ),
           ),
           const SizedBox(height: 8),
@@ -965,6 +981,323 @@ class _EntrySheetState extends ConsumerState<EntrySheet> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// 이 날의 기록 카드 — 흰 면, 행마다 색 점·값·업체·금액, 아래 합계.
+class _EntriesCard extends StatelessWidget {
+  const _EntriesCard({
+    required this.entries,
+    required this.siteById,
+    required this.histories,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final List<WorkEntry> entries;
+  final Map<int, Site> siteById;
+  final List<RateHistoryEntry> histories;
+  final void Function(WorkEntry entry) onEdit;
+  final void Function(WorkEntry entry) onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final brightness = Theme.of(context).brightness;
+    var totalCenti = 0;
+    var dayLaborWon = 0;
+    var anyPriced = false;
+    final rows = <Widget>[];
+    for (final entry in entries) {
+      totalCenti += entry.centiGongsu;
+      final rate = resolveEntryRateWon(
+        dateKey: entry.dateKey,
+        siteId: entry.siteId,
+        unitRateWonOverride: entry.unitRateWonOverride,
+        histories: histories,
+      );
+      int? amount;
+      if (rate != null) {
+        anyPriced = true;
+        amount = calcAmountWon(
+          centiGongsu: entry.centiGongsu,
+          dailyRateWon: rate,
+        );
+        dayLaborWon += amount;
+      }
+      final site = entry.siteId == null ? null : siteById[entry.siteId];
+      final value = '${formatGongsu(entry.centiGongsu)}공수';
+      final title = entry.labelSnapshot.isEmpty || entry.labelSnapshot == value
+          ? value
+          : '${entry.labelSnapshot} · $value';
+      final subParts = [
+        if (site != null) site.name,
+        if (rate != null)
+          entry.unitRateWonOverride != null
+              ? '이 날만 ${formatWon(rate)}'
+              : formatWon(rate),
+      ];
+      rows.add(
+        InkWell(
+          key: ValueKey('entry-${entry.id}'),
+          onTap: () => onEdit(entry),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 6, 10),
+            child: Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: MarkerPalette.colorOf(
+                      site?.colorId ?? entry.colorIdSnapshot,
+                      brightness: brightness,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          color: c.text,
+                        ),
+                      ),
+                      if (subParts.isNotEmpty)
+                        Text(
+                          subParts.join(' · '),
+                          style: TextStyle(fontSize: 12, color: c.muted),
+                        ),
+                    ],
+                  ),
+                ),
+                if (amount != null)
+                  Text(
+                    formatWon(amount),
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: c.text,
+                    ),
+                  ),
+                IconButton(
+                  tooltip: '삭제',
+                  visualDensity: VisualDensity.compact,
+                  icon: Icon(AppIcons.delete, size: 20, color: c.muted),
+                  onPressed: () => onDelete(entry),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    return Material(
+      color: c.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: c.line.withValues(alpha: 0.8)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ...rows,
+            Container(
+              padding: const EdgeInsets.fromLTRB(14, 9, 14, 9),
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: c.line)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '합계',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: c.muted,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerRight,
+                      child: Text(
+                        anyPriced
+                            ? '${formatGongsu(totalCenti)} 공수 · ${formatWon(dayLaborWon)}'
+                            : '${formatGongsu(totalCenti)} 공수',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: c.text,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 프리셋 타일 3열 + 마지막 점선 "직접 입력" 타일. 이 날에 이미 쓴 프리셋은
+/// 잉크로 채워 표시한다.
+class _PresetTiles extends StatelessWidget {
+  const _PresetTiles({
+    required this.presets,
+    required this.usedPresetIds,
+    required this.onPreset,
+    required this.onCustom,
+  });
+
+  final List<Preset> presets;
+  final Set<int> usedPresetIds;
+  final void Function(Preset preset) onPreset;
+  final VoidCallback onCustom;
+
+  static const double _gap = 8;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    final brightness = Theme.of(context).brightness;
+    // 큰글씨 배율에서 두 줄 글자가 잘리지 않도록 타일을 세로로 키운다.
+    final textScale = MediaQuery.textScalerOf(context).scale(14) / 14;
+    final tileHeight = 64.0 * textScale.clamp(1.0, 1.6);
+
+    Widget tile({
+      required Key key,
+      required Widget child,
+      required VoidCallback onTap,
+      Color? color,
+      bool dashed = false,
+    }) {
+      final body = Material(
+        color: color ?? Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          key: key,
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: SizedBox(height: tileHeight, child: Center(child: child)),
+        ),
+      );
+      return dashed
+          ? DashedBorder(color: c.lineStrong, radius: 14, child: body)
+          : body;
+    }
+
+    return LayoutBuilder(
+      builder: (context, box) {
+        final tileWidth = (box.maxWidth - _gap * 2) / 3;
+        return Wrap(
+          spacing: _gap,
+          runSpacing: _gap,
+          children: [
+            for (final preset in presets)
+              SizedBox(
+                width: tileWidth,
+                child: Builder(
+                  builder: (context) {
+                    final on = usedPresetIds.contains(preset.id);
+                    final fg = on ? c.onAccent : c.text;
+                    final value = preset.centiGongsu == 0
+                        ? '휴'
+                        : formatGongsu(preset.centiGongsu);
+                    return tile(
+                      key: ValueKey('preset-${preset.id}'),
+                      color: on ? c.accent : c.tint05,
+                      onTap: () => onPreset(preset),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              value,
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                                height: 1,
+                                color: fg,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: MarkerPalette.colorOf(
+                                      preset.colorId,
+                                      brightness: brightness,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                Flexible(
+                                  child: Text(
+                                    preset.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: fg.withValues(alpha: 0.85),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            SizedBox(
+              width: tileWidth,
+              child: tile(
+                key: const ValueKey('custom-input'),
+                dashed: true,
+                onTap: onCustom,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(AppIcons.keypad, size: 20, color: c.muted),
+                    const SizedBox(height: 3),
+                    Text(
+                      '직접 입력',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: c.muted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/gongsu_value.dart';
+import 'app_icons.dart';
 
 /// 한 번에 입력 가능한 최대 공수 (UI 검증 전용 — 저장 계층은 제한하지 않는다).
 /// "18" 오타(1.8 의도)가 그대로 저장되어 월 합계가 조용히 오염되는 것을 막는다.
@@ -158,16 +159,18 @@ class _GongsuKeypadState extends State<GongsuKeypad> {
                           onPressed: key == '⌫'
                               ? _backspace
                               : () => _append(key),
-                          child: Semantics(
-                            label: key == '⌫' ? '지우기' : null,
-                            child: Text(
-                              key,
-                              style: const TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
+                          child: key == '⌫'
+                              ? Semantics(
+                                  label: '지우기',
+                                  child: const Icon(AppIcons.backspace, size: 26),
+                                )
+                              : Text(
+                                  key,
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
                         ),
                       ),
                     ),
