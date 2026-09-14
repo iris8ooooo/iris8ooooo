@@ -3,22 +3,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app_info.dart';
 import '../../domain/appearance.dart';
+import '../../domain/gongsu_value.dart';
 import '../../domain/pro_limits.dart';
 import '../../state/appearance_providers.dart';
+import '../../state/preset_providers.dart';
 import '../../state/pro_providers.dart';
+import '../../state/site_providers.dart';
+import '../../state/tax_providers.dart';
+import '../app_theme.dart';
 import '../backup/backup_page.dart';
 import '../backup/trash_page.dart';
+import '../common/app_icons.dart';
+import '../common/ink_pill.dart';
+import '../common/tab_header.dart';
 import '../home/ink_nav_bar.dart';
-import '../sites/site_list_page.dart';
 import '../onboarding/onboarding_page.dart';
 import '../presets/preset_list_page.dart';
 import '../pro/paywall_page.dart';
 import '../pro/pro_gate.dart';
+import '../settlement/cycle_start_dialog.dart';
+import '../sites/site_list_page.dart';
 import 'privacy_page.dart';
 import 'tax_rates_page.dart';
-import '../common/app_icons.dart';
 
-/// 설정: 화면(큰글씨·화면 모드·주 시작 요일·테마 색), 프로, 프리셋, 정산, 앱 정보.
+/// 설정: 화면(큰글씨·화면 모드·주 시작·테마 색), 기록, 정산, 백업, 프로, 앱 정보.
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
 
@@ -27,204 +35,291 @@ class SettingsPage extends ConsumerWidget {
     final appearance = ref.watch(appearanceProvider);
     final isPro = ref.watch(proProvider);
     final notifier = ref.read(appearanceProvider.notifier);
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
+    final sites = ref.watch(sitesProvider).valueOrNull ?? const [];
+    final presets = ref.watch(presetsProvider).valueOrNull ?? const [];
+    final cycleStart = ref.watch(settleCycleStartDayProvider).valueOrNull ?? 1;
+
+    void push(Widget page) =>
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => page));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('설정')),
       bottomNavigationBar: const NavSpacer(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
-          _SectionTitle('화면'),
-          _ChoiceRow<TextSize>(
-            label: '글씨 크기',
-            options: TextSize.values,
-            selected: appearance.textSize,
-            labelOf: (v) => v.label,
-            keyOf: (v) => 'text-size-${v.name}',
-            onSelected: notifier.setTextSize,
-          ),
-          _ChoiceRow<ScreenMode>(
-            label: '화면 모드',
-            options: ScreenMode.values,
-            selected: appearance.screenMode,
-            labelOf: (v) => v.label,
-            keyOf: (v) => 'screen-mode-${v.name}',
-            onSelected: notifier.setScreenMode,
-          ),
-          _ChoiceRow<WeekStart>(
-            label: '주 시작 요일',
-            options: WeekStart.values,
-            selected: appearance.weekStart,
-            labelOf: (v) => v.label,
-            keyOf: (v) => 'week-start-${v.name}',
-            onSelected: notifier.setWeekStart,
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 12, bottom: 6),
-            child: Row(
-              children: [
-                const Text('테마 색', style: TextStyle(fontSize: 16)),
-                const SizedBox(width: 8),
-                if (!isPro)
-                  Text(
-                    '프로',
-                    style: TextStyle(fontSize: 13, color: scheme.primary),
+      body: SafeArea(
+        bottom: false,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 16),
+          children: [
+            const TabHeader(title: '설정'),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 4, 24, 0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SectionLabel('화면', muted: true),
+                  _ChoiceRow<TextSize>(
+                    label: '글씨 크기',
+                    options: TextSize.values,
+                    selected: appearance.textSize,
+                    labelOf: (v) => v.label,
+                    keyOf: (v) => 'text-size-${v.name}',
+                    onSelected: notifier.setTextSize,
                   ),
-              ],
-            ),
-          ),
-          Wrap(
-            spacing: 10,
-            children: [
-              for (final option in themeColorOptions)
-                _ColorDot(
-                  key: ValueKey('theme-color-${option.id}'),
-                  option: option,
-                  selected: appearance.themeColorId == option.id,
-                  onTap: () async {
-                    if (option.id != 0 && !isPro) {
-                      final ok = await ensurePro(
-                        context,
-                        ref,
-                        feature: ProFeature.theme,
-                      );
-                      if (!ok) return;
-                    }
-                    notifier.setThemeColor(option.id);
-                  },
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _SectionTitle('프로'),
-          ListTile(
-            key: const ValueKey('pro-tile'),
-            leading: Icon(
-              isPro ? AppIcons.verified : AppIcons.pro,
-              color: scheme.primary,
-            ),
-            title: Text(isPro ? '프로 사용 중' : '$kProName · 한 번만 결제'),
-            subtitle: Text(
-              isPro
-                  ? 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 색'
-                  : 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 색 (구독 아님)',
-            ),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const PaywallPage())),
-          ),
-          _SectionTitle('기록'),
-          ListTile(
-            key: const ValueKey('sites'),
-            leading: const Icon(AppIcons.sites),
-            title: const Text('업체(현장) 관리'),
-            subtitle: const Text('이름 · 단가 · 색 · 세금 방식'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const SiteListPage())),
-          ),
-          ListTile(
-            key: const ValueKey('trash'),
-            leading: const Icon(AppIcons.restore),
-            title: const Text('삭제된 기록 되살리기'),
-            subtitle: const Text('지운 공수·부가항목은 여기 남아 있어요'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () =>
-                Navigator.of(context)
-                    .push(MaterialPageRoute(builder: (_) => const TrashPage())),
-          ),
-          _SectionTitle('공수 버튼(프리셋)'),
-          ListTile(
-            key: const ValueKey('job-presets'),
-            leading: const Icon(AppIcons.job),
-            title: const Text('직군 프리셋 다시 고르기'),
-            subtitle: const Text('건설 · 조선소 기본 세트. 직접 고친 것은 그대로'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const OnboardingPage(standalone: true),
+                  _ChoiceRow<ScreenMode>(
+                    label: '화면 모드',
+                    options: ScreenMode.values,
+                    selected: appearance.screenMode,
+                    labelOf: (v) => v.label,
+                    keyOf: (v) => 'screen-mode-${v.name}',
+                    onSelected: notifier.setScreenMode,
+                  ),
+                  _ChoiceRow<WeekStart>(
+                    label: '주 시작',
+                    options: WeekStart.values,
+                    selected: appearance.weekStart,
+                    labelOf: (v) => v.label,
+                    keyOf: (v) => 'week-start-${v.name}',
+                    onSelected: notifier.setWeekStart,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text.rich(
+                            TextSpan(
+                              text: '테마 색',
+                              style: _rowLabel(c),
+                              children: [
+                                if (!isPro)
+                                  TextSpan(
+                                    text: '  프로',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w800,
+                                      color: c.gold,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            for (final option in themeColorOptions)
+                              _ColorDot(
+                                key: ValueKey('theme-color-${option.id}'),
+                                option: option,
+                                selected:
+                                    appearance.themeColorId == option.id,
+                                onTap: () async {
+                                  if (option.id != 0 && !isPro) {
+                                    final ok = await ensurePro(
+                                      context,
+                                      ref,
+                                      feature: ProFeature.theme,
+                                    );
+                                    if (!ok) return;
+                                  }
+                                  notifier.setThemeColor(option.id);
+                                },
+                              ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SectionLabel('기록', muted: true),
+                  _Row(
+                    key: const ValueKey('sites'),
+                    title: '업체(현장) 관리',
+                    subtitle: sites.isEmpty
+                        ? '이름 · 단가 · 색 · 세금 방식'
+                        : sites.map((s) => s.name).join(' · '),
+                    onTap: () => push(const SiteListPage()),
+                  ),
+                  _Row(
+                    key: const ValueKey('presets'),
+                    title: '프리셋 관리',
+                    subtitle: presets.isEmpty
+                        ? '공수 버튼 만들기'
+                        : presets
+                              .map(
+                                (p) => p.centiGongsu == 0
+                                    ? p.name
+                                    : formatGongsu(p.centiGongsu),
+                              )
+                              .join(' · '),
+                    onTap: () => push(const PresetListPage()),
+                  ),
+                  _Row(
+                    key: const ValueKey('job-presets'),
+                    title: '직군 프리셋 다시 고르기',
+                    subtitle: '건설 · 조선소 기본 세트. 직접 고친 것은 그대로',
+                    onTap: () => push(const OnboardingPage(standalone: true)),
+                  ),
+                  _Row(
+                    key: const ValueKey('trash'),
+                    title: '삭제된 기록',
+                    subtitle: '지운 공수·부가항목 되살리기',
+                    onTap: () => push(const TrashPage()),
+                  ),
+                  const SectionLabel('정산', muted: true),
+                  _Row(
+                    key: const ValueKey('tax'),
+                    title: '세금 · 요율 설정',
+                    subtitle: '${DateTime.now().year}년 요율 · 끝전 처리',
+                    onTap: () => push(const TaxRatesPage()),
+                  ),
+                  _Row(
+                    key: const ValueKey('cycle-start'),
+                    title: '정산 마감일',
+                    subtitle: cycleStartLabel(cycleStart),
+                    onTap: () =>
+                        showCycleStartDialog(context, ref, current: cycleStart),
+                  ),
+                  const SectionLabel('백업', muted: true),
+                  _Row(
+                    key: const ValueKey('backup'),
+                    title: '백업 / 복원',
+                    subtitle: '텍스트 · 파일 · 자동 스냅샷',
+                    onTap: () => push(const BackupPage()),
+                  ),
+                  const SectionLabel('프로', muted: true),
+                  _Row(
+                    key: const ValueKey('pro-tile'),
+                    title: isPro ? '프로 사용 중' : kProName,
+                    subtitle: isPro
+                        ? 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마'
+                        : 'PDF 확인서 · 홈 위젯 · 업체 4개+ · 테마 · $proListPriceLabel 한 번',
+                    strong: true,
+                    trailing: isPro
+                        ? Icon(AppIcons.verified, color: c.gold)
+                        : Container(
+                            height: 34,
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: c.gold,
+                              borderRadius: BorderRadius.circular(17),
+                            ),
+                            child: const Text(
+                              '보기',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                              ),
+                            ),
+                          ),
+                    onTap: () => push(const PaywallPage()),
+                  ),
+                  const SectionLabel('앱 정보', muted: true),
+                  _Row(
+                    title: '버전',
+                    trailing: Text(
+                      kAppVersion,
+                      style: TextStyle(fontSize: 14, color: c.muted),
+                    ),
+                  ),
+                  _Row(
+                    key: const ValueKey('privacy'),
+                    title: '개인정보처리방침',
+                    subtitle: '수집하는 정보 없음 · 서버 없음',
+                    onTap: () => push(const PrivacyPage()),
+                  ),
+                  _Row(
+                    title: '오픈소스 라이선스',
+                    onTap: () => showLicensePage(
+                      context: context,
+                      applicationName: kAppName,
+                      applicationVersion: kAppVersion,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          ListTile(
-            key: const ValueKey('presets'),
-            leading: const Icon(AppIcons.presets),
-            title: const Text('프리셋 관리'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const PresetListPage())),
-          ),
-          _SectionTitle('정산'),
-          ListTile(
-            key: const ValueKey('tax'),
-            leading: const Icon(AppIcons.percent),
-            title: const Text('세금 · 요율 설정'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const TaxRatesPage())),
-          ),
-          _SectionTitle('백업'),
-          ListTile(
-            key: const ValueKey('backup'),
-            leading: const Icon(AppIcons.backup),
-            title: const Text('백업 / 복원'),
-            subtitle: const Text('텍스트 · 파일 · 자동 스냅샷'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const BackupPage())),
-          ),
-          _SectionTitle('앱 정보'),
-          ListTile(
-            leading: const Icon(AppIcons.info),
-            title: const Text('버전'),
-            trailing: Text(kAppVersion, style: const TextStyle(fontSize: 16)),
-          ),
-          ListTile(
-            key: const ValueKey('privacy'),
-            leading: const Icon(AppIcons.privacy),
-            title: const Text('개인정보처리방침'),
-            subtitle: const Text('수집하는 정보 없음 · 서버 없음'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => Navigator.of(context)
-                .push(MaterialPageRoute(builder: (_) => const PrivacyPage())),
-          ),
-          ListTile(
-            leading: const Icon(AppIcons.document),
-            title: const Text('오픈소스 라이선스'),
-            trailing: const Icon(AppIcons.chevronRight),
-            onTap: () => showLicensePage(
-              context: context,
-              applicationName: kAppName,
-              applicationVersion: kAppVersion,
+          ],
+        ),
+      ),
+    );
+  }
+
+  static TextStyle _rowLabel(AppColors c) =>
+      TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: c.text);
+}
+
+/// 설정 줄 — 위에 옅은 선, 제목 + 작은 설명, 오른쪽 꺾쇠(또는 [trailing]).
+class _Row extends StatelessWidget {
+  const _Row({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.strong = false,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = context.colors;
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 50),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: c.line)),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: strong ? FontWeight.w800 : FontWeight.w600,
+                      color: c.text,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11.5, color: c.muted),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+            const SizedBox(width: 12),
+            trailing ??
+                (onTap == null
+                    ? const SizedBox.shrink()
+                    : Icon(AppIcons.chevronRight, size: 18, color: c.muted)),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 18, bottom: 4),
-    child: Text(
-      text,
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w700,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-    ),
-  );
-}
-
+/// "글씨 크기 | 보통 크게 아주 크게" — 왼쪽 이름, 오른쪽 알약(넘치면 줄바꿈).
 class _ChoiceRow<T> extends StatelessWidget {
   const _ChoiceRow({
     required this.label,
@@ -245,23 +340,31 @@ class _ChoiceRow<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Column(
+    child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 16)),
-        const SizedBox(height: 6),
-        Wrap(
-          spacing: 8,
-          runSpacing: 6,
-          children: [
-            for (final option in options)
-              ChoiceChip(
-                key: ValueKey(keyOf(option)),
-                label: Text(labelOf(option)),
-                selected: option == selected,
-                onSelected: (_) => onSelected(option),
-              ),
-          ],
+        Padding(
+          padding: const EdgeInsets.only(top: 8),
+          child: Text(label, style: SettingsPage._rowLabel(context.colors)),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 6,
+            runSpacing: 6,
+            children: [
+              for (final option in options)
+                InkPill(
+                  key: ValueKey(keyOf(option)),
+                  label: labelOf(option),
+                  height: 34,
+                  fontSize: 12.5,
+                  selected: option == selected,
+                  onTap: () => onSelected(option),
+                ),
+            ],
+          ),
         ),
       ],
     ),
@@ -282,26 +385,27 @@ class _ColorDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final color = Color(option.argb);
     return Tooltip(
       message: option.label,
       child: InkWell(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
         child: Container(
-          width: 44,
-          height: 44,
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
             color: color,
             shape: BoxShape.circle,
             border: Border.all(
-              color: selected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : Colors.transparent,
+              color: selected ? c.gold : Colors.transparent,
               width: 3,
             ),
           ),
-          child: selected ? const Icon(AppIcons.check, color: Colors.white) : null,
+          child: selected
+              ? const Icon(AppIcons.check, size: 18, color: Colors.white)
+              : null,
         ),
       ),
     );

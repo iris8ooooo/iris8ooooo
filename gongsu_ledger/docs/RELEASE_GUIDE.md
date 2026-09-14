@@ -11,7 +11,7 @@
 
 ## 1. 앱 아이콘과 버전 (이미 되어 있음)
 
-- 아이콘은 코드로 그려 두었습니다 (`assets/icon/app_icon.png`). 바꾸고 싶으면 1024×1024 PNG로 교체한 뒤 터미널에서:
+- 아이콘은 코드로 그려 두었습니다 (`assets/icon/app_icon.png`, 확정 시안 "잉크 격자"). 바꾸고 싶으면 1024×1024 PNG로 교체한 뒤 터미널에서:
   ```bash
   cd gongsu_ledger
   dart run flutter_launcher_icons

@@ -1,90 +1,56 @@
 // 앱 아이콘 생성기 — 디자인 도구 없이 코드로 1024px 아이콘을 그린다.
+// 확정 시안 "잉크 격자"(5번): 종이 바탕, 잉크 막대 하나, 칸 12개(0.5·1·1.5·2+
+// 농도), 금색 한 칸이 오늘.
 //
 //   flutter test test/screenshots/app_icon_test.dart --dart-define=ICON_OUT=1
 //   dart run flutter_launcher_icons        # 플랫폼별 크기 생성 (pubspec 설정)
 //
 // ICON_OUT 이 없으면 건너뛰므로 일반 `flutter test` 에 영향이 없다.
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show FontLoader;
 import 'package:flutter_test/flutter_test.dart';
 
 const bool iconOut = String.fromEnvironment('ICON_OUT') != '';
 const double _size = 1024;
-const Color _blue = Color(0xFF1565C0);
-const Color _deepBlue = Color(0xFF0D47A1);
+
+// 시안 토큰 (lib/ui/app_theme.dart 의 기본 잉크 팔레트와 같은 값).
+const Color _paper = Color(0xFFFBFAF7);
+const Color _ink = Color(0xFF1B2A4A);
+const Color _gold = Color(0xFFC9A227);
+const List<Color> _cells = [
+  Color(0xFFE6EAF2), Color(0xFFC5CFE1), Color(0xFF94A6C8), Color(0xFF55699A), //
+  Color(0xFFC5CFE1), Color(0xFF55699A), _gold, Color(0xFF94A6C8), //
+  Color(0xFF94A6C8), Color(0xFFE6EAF2), Color(0xFF55699A), Color(0xFFC5CFE1), //
+];
 
 void main() {
-  setUpAll(() async {
-    if (!iconOut) return;
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final loader = FontLoader('NanumGothic')
-      ..addFont(
-        Future.value(
-          ByteData.sublistView(
-            File('assets/fonts/NanumGothic-Bold.ttf').readAsBytesSync(),
-          ),
-        ),
-      );
-    await loader.load();
-  });
-
-  /// 달력 카드 + "공수" 글자. [scale] 로 안전 영역(안드로이드 적응형 66%)에 맞춘다.
-  void drawCard(Canvas canvas, {required double scale}) {
+  /// 256 단위 시안 좌표계로 그린다. [scale] 로 안드로이드 적응형 안전 영역에 맞춘다.
+  void drawGrid(Canvas canvas, {required double scale}) {
+    const u = _size / 256;
     canvas.save();
     canvas.translate(_size / 2, _size / 2);
     canvas.scale(scale);
     canvas.translate(-_size / 2, -_size / 2);
+    canvas.scale(u);
 
-    const card = Rect.fromLTWH(172, 192, 680, 640);
-    final cardR = RRect.fromRectAndRadius(card, const Radius.circular(88));
-    canvas.drawRRect(cardR, Paint()..color = Colors.white);
-
-    // 상단 바 (달력 머리)
-    canvas.save();
-    canvas.clipRRect(cardR);
-    canvas.drawRect(
-      const Rect.fromLTWH(172, 192, 680, 150),
-      Paint()..color = _deepBlue,
+    // 잉크 막대
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        const Rect.fromLTWH(40, 36, 176, 10),
+        const Radius.circular(5),
+      ),
+      Paint()..color = _ink,
     );
-    canvas.restore();
-    // 고리 두 개
-    for (final x in [352.0, 672.0]) {
+    // 칸 4×3
+    for (var i = 0; i < _cells.length; i++) {
       canvas.drawRRect(
         RRect.fromRectAndRadius(
-          Rect.fromCenter(center: Offset(x, 192), width: 44, height: 120),
-          const Radius.circular(22),
+          Rect.fromLTWH(40 + (i % 4) * 46, 62 + (i ~/ 4) * 46, 38, 38),
+          const Radius.circular(9),
         ),
-        Paint()..color = Colors.white,
-      );
-    }
-
-    // "공수" 글자
-    final painter = TextPainter(
-      text: const TextSpan(
-        text: '공수',
-        style: TextStyle(
-          fontFamily: 'NanumGothic',
-          fontWeight: FontWeight.w700,
-          fontSize: 250,
-          color: _blue,
-          letterSpacing: -4,
-        ),
-      ),
-      textDirection: TextDirection.ltr,
-    )..layout();
-    painter.paint(canvas, Offset((_size - painter.width) / 2, 372));
-
-    // 기록 점 세 개 (달력 마커)
-    const dots = [Color(0xFFEF6C00), Color(0xFF2E7D32), Color(0xFFC2185B)];
-    for (var i = 0; i < dots.length; i++) {
-      canvas.drawCircle(
-        Offset(_size / 2 + (i - 1) * 110, 730),
-        30,
-        Paint()..color = dots[i],
+        Paint()..color = _cells[i],
       );
     }
     canvas.restore();
@@ -100,10 +66,10 @@ void main() {
     if (background) {
       canvas.drawRect(
         const Rect.fromLTWH(0, 0, _size, _size),
-        Paint()..color = _blue,
+        Paint()..color = _paper,
       );
     }
-    drawCard(canvas, scale: scale);
+    drawGrid(canvas, scale: scale);
     final image = await recorder.endRecording().toImage(
       _size.toInt(),
       _size.toInt(),
@@ -115,13 +81,15 @@ void main() {
   testWidgets('앱 아이콘 PNG 생성', (tester) async {
     await tester.runAsync(() async {
       Directory('assets/icon').createSync(recursive: true);
-      // iOS·일반: 파란 배경 + 카드
+      // iOS·일반: 종이 바탕 + 격자 (모서리는 OS 가 깎는다)
       await savePng('assets/icon/app_icon.png', background: true, scale: 1.0);
-      // Android 적응형 전경: 투명 배경, 안전 영역(중앙 66%) 안에 카드
+      // Android 적응형 전경: 투명 배경. 원형 마스크의 안전 영역(지름 66/108)
+      // 안에 격자 모서리까지 들어오도록 0.64 배 — 배경색은 pubspec 의
+      // adaptive_icon_background(종이색).
       await savePng(
         'assets/icon/app_icon_foreground.png',
         background: false,
-        scale: 0.86,
+        scale: 0.64,
       );
     });
   }, skip: !iconOut);

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'common/app_icons.dart';
+
 /// 확정 디자인 "잉크 달력"(2026-09-14 오너 결정)의 색·글꼴 토큰.
 ///
 /// 종이 위에 잉크 한 가지. 공수는 잉크의 **농도**(4단계)로, 오늘은 금색,
@@ -286,6 +288,11 @@ ThemeData buildAppTheme(
   );
   final stadium = const StadiumBorder();
   return base.copyWith(
+    // 뒤로가기·닫기도 Phosphor 로 — Material 아이콘과 섞이지 않게.
+    actionIconTheme: ActionIconThemeData(
+      backButtonIconBuilder: (_) => const Icon(AppIcons.back),
+      closeButtonIconBuilder: (_) => const Icon(AppIcons.close),
+    ),
     appBarTheme: base.appBarTheme.copyWith(
       backgroundColor: c.paper,
       foregroundColor: c.text,

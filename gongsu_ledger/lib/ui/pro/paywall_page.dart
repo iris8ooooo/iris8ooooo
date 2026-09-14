@@ -8,6 +8,7 @@ import '../../services/purchase_service.dart';
 import '../../state/pro_providers.dart';
 import '../../state/purchase_providers.dart';
 import '../../app_info.dart';
+import '../app_theme.dart';
 import '../common/app_icons.dart';
 
 /// 프로 안내·구매·복원 화면. 구독이 아닌 일회성 결제임을 분명히 한다.
@@ -160,62 +161,90 @@ class _PaywallPageState extends ConsumerState<PaywallPage>
   @override
   Widget build(BuildContext context) {
     final isPro = ref.watch(proProvider);
-    final scheme = Theme.of(context).colorScheme;
+    final c = context.colors;
     final priceLabel = _price ?? proListPriceLabel;
 
     return Scaffold(
       appBar: AppBar(title: const Text(kProName)),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
         children: [
           if (widget.feature != null && !isPro)
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                color: scheme.primaryContainer,
+                color: c.tint05,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '프로 기능이에요: ${widget.feature!.label}',
                 style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onPrimaryContainer,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: c.text,
                 ),
               ),
             ),
           Text(
             isPro ? '프로를 사용 중이에요' : '한 번만 결제 · 구독 아님',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            style: AppFonts.displayStyle(size: 30, color: c.text),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 10),
           Text(
             isPro
                 ? '모든 프로 기능이 켜져 있어요. 기기를 바꾸면 같은 스토어 계정으로 로그인한 뒤 "이전 구매 복원"을 누르세요.'
                 : '한 번 사면 계속 쓰는 프로 기능이에요. 광고는 프로든 무료든 영원히 없어요.',
-            style: TextStyle(fontSize: 16, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 15, color: c.muted, height: 1.4),
           ),
           const SizedBox(height: 20),
           for (final f in ProFeature.values)
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                AppIcons.checkCircle,
-                color: isPro ? scheme.primary : scheme.onSurfaceVariant,
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 7),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    AppIcons.checkCircle,
+                    size: 22,
+                    color: isPro ? c.gold : c.tint15,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          f.label,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: c.text,
+                          ),
+                        ),
+                        Text(
+                          switch (f) {
+                            ProFeature.pdf => '노동청·업체에 낼 수 있는 월 공수 확인서',
+                            ProFeature.widget => '홈 화면에서 이번 달 공수·실수령 바로 확인',
+                            ProFeature.sites => '무료는 업체 $freeSiteLimit개까지',
+                            ProFeature.theme => '앱 색상 바꾸기',
+                          },
+                          style: TextStyle(fontSize: 13, color: c.muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-              title: Text(f.label),
-              subtitle: Text(switch (f) {
-                ProFeature.pdf => '노동청·업체에 낼 수 있는 월 공수 확인서',
-                ProFeature.widget => '홈 화면에서 이번 달 공수·실수령 바로 확인',
-                ProFeature.sites => '무료는 업체 $freeSiteLimit개까지',
-                ProFeature.theme => '앱 색상 바꾸기',
-              }),
             ),
           const SizedBox(height: 20),
           if (!isPro) ...[
             FilledButton(
               key: const ValueKey('buy-pro'),
+              style: FilledButton.styleFrom(
+                backgroundColor: c.gold,
+                foregroundColor: Colors.white,
+              ),
               onPressed: _busy ? null : _buy,
               child: Text('프로 구매하기 · $priceLabel'),
             ),
@@ -237,14 +266,14 @@ class _PaywallPageState extends ConsumerState<PaywallPage>
               child: Text(
                 _message!,
                 key: const ValueKey('paywall-message'),
-                style: TextStyle(color: scheme.onSurfaceVariant),
+                style: TextStyle(color: c.muted),
               ),
             ),
           const SizedBox(height: 24),
           Text(
             '결제는 App Store / Google Play 가 처리하고, 앱은 결제 정보를 저장하지 않아요. '
             '가격은 스토어 설정에 따라 표시돼요.',
-            style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            style: TextStyle(fontSize: 12.5, color: c.muted, height: 1.4),
           ),
         ],
       ),
