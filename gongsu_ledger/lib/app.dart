@@ -6,7 +6,7 @@ import 'domain/appearance.dart';
 import 'state/appearance_providers.dart';
 import 'state/pro_providers.dart';
 import 'ui/app_theme.dart';
-import 'ui/calendar/calendar_page.dart';
+import 'ui/home/home_shell.dart';
 import 'ui/common/home_widget_syncer.dart';
 import 'ui/common/purchase_syncer.dart';
 import 'ui/common/snapshot_scheduler.dart';
@@ -57,7 +57,7 @@ class GongsuApp extends ConsumerWidget {
       home: PurchaseSyncer(
         child: onboarded
             ? const SnapshotScheduler(
-                child: HomeWidgetSyncer(child: CalendarPage()),
+                child: HomeWidgetSyncer(child: HomeShell()),
               )
             : const OnboardingPage(),
       ),

@@ -12,6 +12,7 @@ import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 import 'package:gongsu_ledger/state/prefs_providers.dart';
 import 'package:gongsu_ledger/ui/backup/trash_page.dart';
+import 'nav_helpers.dart';
 
 /// 삭제된 기록 되살리기 — 실행 취소를 놓쳐도 지운 기록은 되돌릴 수 있다.
 void main() {
@@ -57,15 +58,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(await db.workEntryDao.getRange(today, today), isEmpty);
 
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('설정'));
-    await tester.pumpAndSettle();
+    await goTab(tester, 'settings');
     await tester.scrollUntilVisible(
       find.byKey(const ValueKey('trash')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
+    await tester.ensureVisible(find.byKey(const ValueKey('trash')));
+    await tester.pumpAndSettle();
     await tester.tap(find.byKey(const ValueKey('trash')));
     await tester.pumpAndSettle();
     expect(find.byType(TrashPage), findsOneWidget);

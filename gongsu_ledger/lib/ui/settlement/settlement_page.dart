@@ -14,6 +14,8 @@ import '../../state/site_providers.dart';
 import '../../state/tax_providers.dart';
 import '../common/won_format.dart';
 import '../export/report_export_page.dart';
+import '../home/ink_nav_bar.dart';
+import '../common/app_icons.dart';
 
 /// 기간 지정 정산 — 월초 기준이 아닌 임의 기간(예: 전월 21일~당월 20일 마감
 /// 현장)의 업체별 공수·세전·공제·실수령.
@@ -154,7 +156,7 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
           IconButton(
             key: const ValueKey('export-pdf'),
             tooltip: '공수 확인서 PDF',
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(AppIcons.pdf),
             onPressed: () async {
               // 공수 확인서 PDF 는 프로 기능.
               if (!await ensurePro(context, ref, feature: ProFeature.pdf)) {
@@ -171,11 +173,12 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
           ),
           IconButton(
             tooltip: '마감 주기 설정',
-            icon: const Icon(Icons.event_repeat),
+            icon: const Icon(AppIcons.cycle),
             onPressed: () => _editCycleStartDay(cycleStart),
           ),
         ],
       ),
+      bottomNavigationBar: const NavSpacer(),
       body: ListView(
         padding: const EdgeInsets.all(12),
         children: [
@@ -199,7 +202,7 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   key: const ValueKey('pick-from'),
-                  icon: const Icon(Icons.calendar_today, size: 18),
+                  icon: const Icon(AppIcons.today, size: 18),
                   label: Text(_fmt(_fromKey)),
                   onPressed: () => _pickDate(isFrom: true),
                 ),
@@ -211,7 +214,7 @@ class _SettlementPageState extends ConsumerState<SettlementPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   key: const ValueKey('pick-to'),
-                  icon: const Icon(Icons.calendar_today, size: 18),
+                  icon: const Icon(AppIcons.today, size: 18),
                   label: Text(_fmt(_toKey)),
                   onPressed: () => _pickDate(isFrom: false),
                 ),

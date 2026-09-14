@@ -12,6 +12,7 @@ import 'package:gongsu_ledger/domain/date_key.dart';
 import 'package:gongsu_ledger/domain/tax_engine.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 import 'package:gongsu_ledger/state/prefs_providers.dart';
+import 'nav_helpers.dart';
 
 /// M3 플로: 업체 세금 방식 → 월 카드 실수령, 정산 화면, 통계, 세율 설정.
 /// (DB 검증은 스트림이 아닌 일반 쿼리만 — CLAUDE.md '테스트 작성 주의')
@@ -50,12 +51,6 @@ void main() {
   String textOf(WidgetTester tester, String key) =>
       tester.widget<Text>(find.byKey(ValueKey(key))).data!;
 
-  Future<void> openMenu(WidgetTester tester, String item) async {
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(item));
-    await tester.pumpAndSettle();
-  }
 
   /// 단가 150,000원 업체 + 이번 달 1공수 기록 2건.
   Future<int> pumpWithSiteAndEntries(
@@ -117,10 +112,8 @@ void main() {
       true,
     );
 
-    // 달력으로 복귀 (pageBack()은 영어 툴팁 'Back'을 찾으므로 한국어 앱에선
-    // BackButton 타입으로 직접 탭한다)
-    await tester.tap(find.byType(BackButton));
-    await tester.pumpAndSettle();
+    // 달력으로 복귀 (업체 목록 닫기 → 달력 탭)
+    await back(tester);
     // 2일 근무(8일 미만): 연금·건강 없음. 일당 150,000 = 일 공제액이라
     // 일용소득세 0. 고용보험 300,000 × 0.9% = 2,700 → 실수령 297,300
     expect(textOf(tester, 'net-won'), '297,300원');

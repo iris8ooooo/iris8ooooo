@@ -7,6 +7,7 @@ import '../../state/db_providers.dart';
 import '../../state/prefs_providers.dart';
 import '../../state/pro_providers.dart';
 import '../../app_info.dart';
+import '../common/app_icons.dart';
 
 /// 첫 실행 온보딩: 직군 선택 → 기본 프리셋 세트. 로그인·회원가입 없음.
 ///
@@ -143,7 +144,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: scheme.primary),
+                        Icon(AppIcons.chevronRight, color: scheme.primary),
                       ],
                     ),
                   ),
@@ -172,7 +173,7 @@ class _Bullet extends StatelessWidget {
     child: Row(
       children: [
         Icon(
-          Icons.check,
+          AppIcons.check,
           size: 20,
           color: Theme.of(context).colorScheme.primary,
         ),

@@ -45,7 +45,8 @@ enum WeekStart {
       values.firstWhere((v) => v.name == raw, orElse: () => sunday);
 }
 
-/// 테마 색 후보. id 0(파랑)은 무료, 나머지는 프로.
+/// 테마 색(잉크) 후보. id 0(남색)은 무료, 나머지는 프로.
+/// 잉크 색은 채운 버튼·켜진 탭·공수 농도(종이와 잉크 사이 4단계)에 쓰인다.
 class ThemeColorOption {
   const ThemeColorOption(this.id, this.label, this.argb);
 
@@ -55,11 +56,11 @@ class ThemeColorOption {
 }
 
 const List<ThemeColorOption> themeColorOptions = [
-  ThemeColorOption(0, '파랑', 0xFF1565C0),
-  ThemeColorOption(1, '초록', 0xFF2E7D32),
-  ThemeColorOption(2, '주황', 0xFFE65100),
-  ThemeColorOption(3, '보라', 0xFF6A1B9A),
-  ThemeColorOption(4, '청록', 0xFF00695C),
+  ThemeColorOption(0, '남색', 0xFF1B2A4A),
+  ThemeColorOption(1, '숲', 0xFF1F4D3A),
+  ThemeColorOption(2, '자두', 0xFF4A2A4E),
+  ThemeColorOption(3, '벽돌', 0xFF7A3B2E),
+  ThemeColorOption(4, '먹', 0xFF1F2124),
 ];
 
 ThemeColorOption themeColorById(int id) => themeColorOptions.firstWhere(

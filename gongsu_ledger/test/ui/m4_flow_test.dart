@@ -19,6 +19,7 @@ import 'package:gongsu_ledger/services/share_service.dart';
 import 'package:gongsu_ledger/state/backup_providers.dart';
 import 'package:gongsu_ledger/state/db_providers.dart';
 import 'package:gongsu_ledger/state/prefs_providers.dart';
+import 'nav_helpers.dart';
 
 class FakeShareService implements ShareService {
   final List<String> texts = [];
@@ -101,12 +102,8 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
   }
 
-  Future<void> openBackup(WidgetTester tester) async {
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('백업 / 복원'));
-    await tester.pumpAndSettle();
-  }
+  Future<void> openBackup(WidgetTester tester) =>
+      openMenu(tester, '백업 / 복원');
 
   int todayKey() => dateKeyOf(DateTime.now());
 
@@ -250,10 +247,7 @@ void main() {
   testWidgets('정산 화면에서 공수 확인서 화면으로 진입한다', (tester) async {
     await tester.pumpWidget(buildApp());
     await tester.pumpAndSettle();
-    await tester.tap(find.byTooltip('메뉴'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('정산 (기간 지정)'));
-    await tester.pumpAndSettle();
+    await openMenu(tester, '정산 (기간 지정)');
     await tester.tap(find.byKey(const ValueKey('export-pdf')));
     await tester.pumpAndSettle();
     expect(find.text('공수 확인서'), findsOneWidget);

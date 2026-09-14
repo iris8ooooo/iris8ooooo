@@ -18,6 +18,15 @@ Future<void> main() async {
     yield LicenseEntryWithLineBreaks(const [
       'NanumGothic',
     ], await rootBundle.loadString('assets/fonts/OFL.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Pretendard',
+    ], await rootBundle.loadString('assets/fonts/OFL-Pretendard.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Song Myung',
+    ], await rootBundle.loadString('assets/fonts/OFL-SongMyung.txt'));
+    yield LicenseEntryWithLineBreaks(const [
+      'Phosphor Icons',
+    ], await rootBundle.loadString('assets/fonts/LICENSE-Phosphor.txt'));
   });
   final prefs = await SharedPreferences.getInstance();
   runApp(

@@ -15,6 +15,7 @@ import '../../state/backup_providers.dart';
 import '../../state/db_providers.dart';
 import '../../state/site_providers.dart';
 import '../../state/tax_providers.dart';
+import '../common/app_icons.dart';
 
 /// 공수 확인서 내보내기 — 업체/근로자 이름을 고르고 PDF 미리보기·공유,
 /// 또는 이미지(PNG)로 공유.
@@ -237,14 +238,14 @@ class _ReportExportPageState extends ConsumerState<ReportExportPage> {
           const SizedBox(height: 8),
           FilledButton.icon(
             key: const ValueKey('report-preview'),
-            icon: const Icon(Icons.picture_as_pdf),
+            icon: const Icon(AppIcons.pdf),
             label: const Text('PDF 미리보기 · 공유'),
             onPressed: _busy ? null : _preview,
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             key: const ValueKey('report-image'),
-            icon: const Icon(Icons.image_outlined),
+            icon: const Icon(AppIcons.image),
             label: const Text('이미지로 공유 (카톡 전송용)'),
             onPressed: _busy ? null : _shareImage,
           ),
